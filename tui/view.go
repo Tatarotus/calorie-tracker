@@ -13,7 +13,16 @@ func (m Model) View() string {
 	s += StyleTitle.Render("CALORIE TRACKER PRO") + "\n\n"
 
 	if m.Loading {
-		s += "Loading... (LLM analysis in progress)\n"
+		msg := "⏳ Loading..."
+		switch m.Mode {
+		case AddFoodView:
+			msg = "🤖 Analyzing your meal..."
+		case ReviewView:
+			msg = "📊 Generating your review..."
+		case ConfirmFoodView:
+			msg = "💾 Saving to database..."
+		}
+		s += msg + "\n"
 	} else if m.Error != nil {
 		s += StyleError.Render(fmt.Sprintf("Error: %v", m.Error)) + "\n"
 	} else {
@@ -125,7 +134,7 @@ func (m Model) reviewView() string {
 
 	r := m.Review
 	var sb strings.Builder
-	sb.WriteString(StyleHeader.Render("AI Progress Review") + "\n\n")
+	sb.WriteString(StyleHeader.Render("AI PROGRESS REVIEW") + "\n\n")
 	
 	scoreStyle := StyleSuccess
 	if r.Score < 50 {
@@ -134,17 +143,34 @@ func (m Model) reviewView() string {
 		scoreStyle = StyleWarning
 	}
 
-	sb.WriteString(fmt.Sprintf("Score: %s | Progress: %s\n\n", scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)), r.Progress))
-	sb.WriteString("Summary: " + r.Summary + "\n\n")
+	sb.WriteString(fmt.Sprintf("Score: %s | Progress: %s\n\n", 
+		scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)), 
+		StyleHighlight.Render(strings.ToUpper(r.Progress))))
 	
-	sb.WriteString("Patterns Identified:\n")
-	for _, p := range r.Patterns {
-		sb.WriteString(" - " + p + "\n")
+	sb.WriteString(StyleHeader.Render("Summary") + "\n")
+	sb.WriteString(r.Summary + "\n\n")
+	
+	if len(r.Issues) > 0 {
+		sb.WriteString(StyleHeader.Render("Issues Found") + "\n")
+		for _, i := range r.Issues {
+			sb.WriteString(StyleError.Render(" • ") + i + "\n")
+		}
+		sb.WriteString("\n")
 	}
 	
-	sb.WriteString("\nSuggestions:\n")
-	for _, s := range r.Suggestions {
-		sb.WriteString(" - " + s + "\n")
+	if len(r.Patterns) > 0 {
+		sb.WriteString(StyleHeader.Render("Patterns Identified") + "\n")
+		for _, p := range r.Patterns {
+			sb.WriteString(" • " + p + "\n")
+		}
+		sb.WriteString("\n")
+	}
+	
+	if len(r.Suggestions) > 0 {
+		sb.WriteString(StyleHeader.Render("Suggestions") + "\n")
+		for _, s := range r.Suggestions {
+			sb.WriteString(StyleSuccess.Render(" • ") + s + "\n")
+		}
 	}
 
 	return StyleSection.Width(60).Render(sb.String())

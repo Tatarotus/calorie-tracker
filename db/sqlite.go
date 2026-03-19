@@ -104,7 +104,14 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		e.Timestamp, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		// Try parsing different common formats or use driver's direct Scan if possible
+		// The format found was "2006-01-02 15:04:05.999999999 +0000 UTC"
+		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
+		if err != nil {
+			// Fallback if needed
+			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		}
+		e.Timestamp = parsedTs
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -130,7 +137,11 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
 			return nil, err
 		}
-		e.Timestamp, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
+		if err != nil {
+			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		}
+		e.Timestamp = parsedTs
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -215,7 +226,14 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		e.Timestamp, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		// Try parsing different common formats or use driver's direct Scan if possible
+		// The format found was "2006-01-02 15:04:05.999999999 +0000 UTC"
+		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
+		if err != nil {
+			// Fallback if needed
+			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
+		}
+		e.Timestamp = parsedTs
 		entries = append(entries, e)
 	}
 	return entries, nil

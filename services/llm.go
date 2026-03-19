@@ -39,14 +39,15 @@ type chatResponse struct {
 }
 
 func (s *LLMService) ParseFood(description string) (*models.FoodPreview, error) {
-	prompt := fmt.Sprintf(`Analyze the following food description and return STRICT JSON with:
+	prompt := fmt.Sprintf(`Analyze the following food description and return a JSON block with:
 {
   "calories": number,
   "protein": number,
   "carbs": number,
   "fat": number
 }
-Food: "%s"`, description)
+Food: "%s"
+Rules: Return ONLY the JSON block, no other text.`, description)
 
 	var content string
 	var err error
@@ -76,22 +77,24 @@ func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
 	prompt := fmt.Sprintf(`You are a nutrition and performance analyst.
 Analyze the following user data.
-Return a JSON response with:
-summary
-progress ("improving", "stable", "regressing")
-score (0–100)
-issues (list)
-suggestions (actionable)
-patterns (behavioral insights)
+Return a JSON response with EXACTLY this structure:
+{
+  "summary": "string",
+  "progress": "improving" | "stable" | "regressing",
+  "score": number,
+  "issues": ["string"],
+  "suggestions": ["string"],
+  "patterns": ["string"]
+}
 
 Data:
 %s
 
 Rules:
-No fluff
-No generic advice
-Base ONLY on data
-Return STRICT JSON`, string(jsonData))
+1. Base ONLY on the provided data.
+2. Be specific, no generic advice.
+3. Return ONLY a valid JSON block.
+4. Use lowercase keys as shown above.`, string(jsonData))
 
 	var content string
 	var err error
@@ -162,6 +165,15 @@ func (s *LLMService) callLLM(model, prompt string) (string, error) {
 }
 
 func (s *LLMService) extractJSON(content string) string {
+	// First, try to find a markdown block
+	if start := strings.Index(content, "```json"); start != -1 {
+		rest := content[start+7:]
+		if end := strings.Index(rest, "```"); end != -1 {
+			return strings.TrimSpace(rest[:end])
+		}
+	}
+	
+	// Fallback to first '{' and last '}'
 	start := strings.Index(content, "{")
 	end := strings.LastIndex(content, "}")
 	if start == -1 || end == -1 || end < start {
