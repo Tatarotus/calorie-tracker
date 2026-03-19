@@ -35,7 +35,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
-		m.Viewport.Width = m.Width - 4
+		
+		vpWidth := m.Width - 4
+		if vpWidth > 60 {
+			vpWidth = 60
+		}
+		m.Viewport.Width = vpWidth
 		m.Viewport.Height = m.Height - 14 // Increased to accommodate sticky header
 		if m.Viewport.Height < 5 {
 			m.Viewport.Height = 5
