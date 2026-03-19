@@ -68,10 +68,33 @@ func (db *DB) migrate() error {
 	return nil
 }
 
+func parseTimestamp(ts string) time.Time {
+	formats := []string{
+		"2006-01-02 15:04:05.999999999 -0700 MST",
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05.999999999",
+		"2006-01-02 15:04:05",
+		time.RFC3339,
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, ts); err == nil {
+			return t
+		}
+	}
+	// Try a very permissive parse if it contains a date-like string
+	if len(ts) >= 10 {
+		if t, err := time.Parse("2006-01-02", ts[:10]); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
-		entry.Timestamp.UTC(), entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
+		entry.Timestamp.UTC().Format("2006-01-02 15:04:05.999999999 -0700 MST"), 
+		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
 	)
 	return err
 }
@@ -79,7 +102,8 @@ func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 func (db *DB) AddWaterEntry(entry models.WaterEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO water_entries (timestamp, amount_ml) VALUES (?, ?)",
-		entry.Timestamp.UTC(), entry.AmountML,
+		entry.Timestamp.UTC().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		entry.AmountML,
 	)
 	return err
 }
@@ -90,7 +114,8 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? AND timestamp < ?",
-		start, end,
+		start.Format("2006-01-02 15:04:05.999999999 -0700 MST"), 
+		end.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 	)
 	if err != nil {
 		return nil, err
@@ -104,14 +129,7 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		// Try parsing different common formats or use driver's direct Scan if possible
-		// The format found was "2006-01-02 15:04:05.999999999 +0000 UTC"
-		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
-		if err != nil {
-			// Fallback if needed
-			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
-		}
-		e.Timestamp = parsedTs
+		e.Timestamp = parseTimestamp(ts)
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -123,7 +141,8 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? AND timestamp < ?",
-		start, end,
+		start.Format("2006-01-02 15:04:05.999999999 -0700 MST"), 
+		end.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 	)
 	if err != nil {
 		return nil, err
@@ -137,11 +156,7 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
 			return nil, err
 		}
-		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
-		if err != nil {
-			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
-		}
-		e.Timestamp = parsedTs
+		e.Timestamp = parseTimestamp(ts)
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -151,9 +166,10 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	end := time.Now().UTC()
 	start := end.AddDate(0, 0, -days)
 
+	// Use SUBSTR as a fallback for strftime if the format isn't standard ISO
 	query := `
 		SELECT 
-			strftime('%Y-%m-%d', timestamp) as date,
+			COALESCE(strftime('%Y-%m-%d', timestamp), SUBSTR(timestamp, 1, 10)) as date,
 			SUM(calories) as calories,
 			SUM(protein) as protein,
 			SUM(carbs) as carbs,
@@ -164,7 +180,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		GROUP BY date
 		UNION ALL
 		SELECT 
-			strftime('%Y-%m-%d', timestamp) as date,
+			COALESCE(strftime('%Y-%m-%d', timestamp), SUBSTR(timestamp, 1, 10)) as date,
 			0 as calories,
 			0 as protein,
 			0 as carbs,
@@ -175,7 +191,9 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		GROUP BY date
 	`
 	
-	rows, err := db.conn.Query(query, start, start)
+	rows, err := db.conn.Query(query, 
+		start.Format("2006-01-02 15:04:05.999999999 -0700 MST"), 
+		start.Format("2006-01-02 15:04:05.999999999 -0700 MST"))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +206,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		if err := rows.Scan(&date, &cal, &pro, &carb, &fat, &water); err != nil {
 			return nil, err
 		}
-		if !date.Valid {
+		if !date.Valid || date.String == "" {
 			continue
 		}
 		if _, ok := statsMap[date.String]; !ok {
@@ -212,7 +230,7 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	start := time.Now().UTC().AddDate(0, 0, -days)
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ?",
-		start,
+		start.Format("2006-01-02 15:04:05.999999999 -0700 MST"),
 	)
 	if err != nil {
 		return nil, err
@@ -226,14 +244,7 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		// Try parsing different common formats or use driver's direct Scan if possible
-		// The format found was "2006-01-02 15:04:05.999999999 +0000 UTC"
-		parsedTs, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", ts)
-		if err != nil {
-			// Fallback if needed
-			parsedTs, _ = time.Parse("2006-01-02 15:04:05.999999999-07:00", ts)
-		}
-		e.Timestamp = parsedTs
+		e.Timestamp = parseTimestamp(ts)
 		entries = append(entries, e)
 	}
 	return entries, nil

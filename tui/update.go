@@ -67,6 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Mode = EditFoodPreviewView
 				m.EditField = 0
 				m.setupEditInput()
+				return m, nil
 			case "ctrl+c", "q":
 				return m, tea.Quit
 			}
@@ -98,10 +99,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Mode = AddFoodView
 				m.FoodInput.Focus()
 				m.FoodInput.SetValue("")
+				return m, nil
 			case "w":
 				m.Mode = AddWaterView
 				m.WaterInput.Focus()
 				m.WaterInput.SetValue("")
+				return m, nil
 			case "r":
 				m.Mode = ReviewView
 				m.Loading = true
