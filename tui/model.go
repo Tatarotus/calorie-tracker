@@ -35,6 +35,7 @@ type Model struct {
 	Review      *models.ReviewResult
 	PendingFood *models.FoodPreview
 	TodayLog    []models.FoodEntry
+	GoalDescription string
 	Loading     bool
 	Error       error
 	Width       int

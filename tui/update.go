@@ -10,18 +10,19 @@ import (
 )
 
 type (
-	StatsMsg      models.DailyStats
-	FoodParsedMsg *models.FoodPreview
-	FoodSavedMsg  struct{}
-	WaterMsg      struct{}
-	GoalSavedMsg  struct{}
-	ReviewMsg     *models.ReviewResult
-	TodayLogMsg   []models.FoodEntry
-	ErrMsg        error
+	StatsMsg           models.DailyStats
+	FoodParsedMsg      *models.FoodPreview
+	FoodSavedMsg       struct{}
+	WaterMsg           struct{}
+	GoalSavedMsg       struct{}
+	GoalDescriptionMsg string
+	ReviewMsg          *models.ReviewResult
+	TodayLogMsg        []models.FoodEntry
+	ErrMsg             error
 )
 
 func (m Model) Init() tea.Cmd {
-	return m.getStatsCmd()
+	return tea.Batch(m.getStatsCmd(), m.getGoalCmd())
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -35,7 +36,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Width = msg.Width
 		m.Height = msg.Height
 		m.Viewport.Width = m.Width - 4
-		m.Viewport.Height = m.Height - 10
+		m.Viewport.Height = m.Height - 14 // Increased to accommodate sticky header
 		if m.Viewport.Height < 5 {
 			m.Viewport.Height = 5
 		}
@@ -155,6 +156,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Stats = models.DailyStats(msg)
 		m.Loading = false
 
+	case GoalDescriptionMsg:
+		m.GoalDescription = string(msg)
+
 	case FoodParsedMsg:
 		m.Loading = false
 		m.PendingFood = (*models.FoodPreview)(msg)
@@ -168,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case GoalSavedMsg:
 		m.Loading = false
 		m.Mode = DashboardView
-		return m, m.getStatsCmd()
+		return m, tea.Batch(m.getStatsCmd(), m.getGoalCmd())
 
 	case TodayLogMsg:
 		m.Loading = false
@@ -248,6 +252,16 @@ func (m Model) getStatsCmd() tea.Cmd {
 			return ErrMsg(err)
 		}
 		return StatsMsg(stats)
+	}
+}
+
+func (m Model) getGoalCmd() tea.Cmd {
+	return func() tea.Msg {
+		goal, err := m.Tracker.GetGoal()
+		if err != nil {
+			return ErrMsg(err)
+		}
+		return GoalDescriptionMsg(goal)
 	}
 }
 

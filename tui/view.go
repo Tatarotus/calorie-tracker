@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -60,13 +62,19 @@ func (m Model) setGoalView() string {
 }
 
 func (m Model) dashboardView() string {
+	var goalInfo string
+	if m.GoalDescription != "" && m.GoalDescription != "No goal set" {
+		goalInfo = m.renderGoalComparison() + "\n\n"
+	}
+
 	content := fmt.Sprintf(
-		"Daily Totals (%s)\n\n"+
+		"%sDaily Totals (%s)\n\n"+
 			"Calories: %s\n"+
 			"Protein:  %s g\n"+
 			"Carbs:    %s g\n"+
 			"Fat:      %s g\n"+
 			"Water:    %s ml",
+		goalInfo,
 		m.Stats.Date,
 		StyleStats.Render(fmt.Sprintf("%.0f", m.Stats.Calories)),
 		StyleStats.Render(fmt.Sprintf("%.1f", m.Stats.Protein)),
@@ -75,6 +83,31 @@ func (m Model) dashboardView() string {
 		StyleStats.Render(fmt.Sprintf("%.0f", m.Stats.WaterML)),
 	)
 	return StyleSection.Render(content)
+}
+
+func (m Model) renderGoalComparison() string {
+	// Simple heuristic for calorie goal extraction
+	re := regexp.MustCompile(`(\d+)\s*kcal`)
+	match := re.FindStringSubmatch(strings.ToLower(m.GoalDescription))
+	if len(match) > 1 {
+		goalKcal, _ := strconv.ParseFloat(match[1], 64)
+		diff := m.Stats.Calories - goalKcal
+		diffStr := fmt.Sprintf("%.0f", diff)
+		if diff > 0 {
+			diffStr = "+" + diffStr
+		}
+		return fmt.Sprintf("🎯 Goal: %.0f kcal/day\n📊 Today: %.0f kcal (%s)", goalKcal, m.Stats.Calories, diffStr)
+	}
+
+	// Simple weight goal extraction
+	reWeight := regexp.MustCompile(`reach\s*(\d+)\s*kg`)
+	matchW := reWeight.FindStringSubmatch(strings.ToLower(m.GoalDescription))
+	if len(matchW) > 1 {
+		goalKg := matchW[1]
+		return fmt.Sprintf("🎯 Goal: Reach %s kg\n📊 Current progress in AI Review (r)", goalKg)
+	}
+
+	return fmt.Sprintf("🎯 Goal: %s", m.GoalDescription)
 }
 
 func (m Model) addFoodView() string {
@@ -123,7 +156,6 @@ func (m Model) editFoodPreviewView() string {
 
 func (m Model) renderTodayLogString() string {
 	var sb strings.Builder
-	sb.WriteString(StyleHeader.Render("📅 Today's Food Log") + "\n\n")
 	
 	var total float64
 	if len(m.TodayLog) == 0 {
@@ -135,12 +167,12 @@ func (m Model) renderTodayLogString() string {
 		}
 		sb.WriteString("\n" + StyleHeader.Render(fmt.Sprintf("Total: %.0f kcal", total)))
 	}
-	// Wrap text to fit viewport
 	return lipgloss.NewStyle().Width(58).Render(sb.String())
 }
 
 func (m Model) todayLogView() string {
-	return StyleSection.Render(m.Viewport.View())
+	header := StyleHeader.Render("📅 Today's Food Log") + "\n\n"
+	return StyleSection.Render(header + m.Viewport.View())
 }
 
 func (m Model) renderReviewString() string {
@@ -150,18 +182,6 @@ func (m Model) renderReviewString() string {
 
 	r := m.Review
 	var sb strings.Builder
-	sb.WriteString(StyleHeader.Render("AI PROGRESS REVIEW") + "\n\n")
-	
-	scoreStyle := StyleSuccess
-	if r.Score < 50 {
-		scoreStyle = StyleError
-	} else if r.Score < 80 {
-		scoreStyle = StyleWarning
-	}
-
-	sb.WriteString(fmt.Sprintf("Score: %s | Progress: %s\n\n", 
-		scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)), 
-		StyleHighlight.Render(strings.ToUpper(r.Progress))))
 	
 	if r.GoalProgress != "" {
 		sb.WriteString(StyleHeader.Render("🎯 Progress Towards Goal") + "\n")
@@ -194,13 +214,31 @@ func (m Model) renderReviewString() string {
 		}
 	}
 
-	// Wrap text to fit viewport
 	return lipgloss.NewStyle().Width(58).Render(sb.String())
 }
 
 func (m Model) reviewView() string {
-	// Let viewport handle the width to prevent double wrapping or duplication issues
-	return StyleSection.Render(m.Viewport.View())
+	if m.Review == nil {
+		return StyleSection.Render("📊 Generating your review...")
+	}
+
+	r := m.Review
+	scoreStyle := StyleSuccess
+	if r.Score < 50 {
+		scoreStyle = StyleError
+	} else if r.Score < 80 {
+		scoreStyle = StyleWarning
+	}
+
+	stickyHeader := fmt.Sprintf(
+		"%s\nScore: %s | Progress: %s\n%s\n",
+		StyleHeader.Render("AI PROGRESS REVIEW"),
+		scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)),
+		StyleHighlight.Render(strings.ToUpper(r.Progress)),
+		strings.Repeat("─", 58),
+	)
+
+	return StyleSection.Render(stickyHeader + m.Viewport.View())
 }
 
 func (m Model) helpView() string {
