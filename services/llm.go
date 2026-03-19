@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -39,7 +40,7 @@ type chatResponse struct {
 }
 
 func (s *LLMService) ParseFood(description string) (*models.FoodPreview, error) {
-	prompt := fmt.Sprintf(`Analyze the following food description and return a JSON block with:
+	prompt := fmt.Sprintf(`You are a nutrition expert. Analyze the following food description and return a JSON block with nutritional estimates for the given portion.
 {
   "calories": number,
   "protein": number,
@@ -47,7 +48,12 @@ func (s *LLMService) ParseFood(description string) (*models.FoodPreview, error) 
   "fat": number
 }
 Food: "%s"
-Rules: Return ONLY the JSON block, no other text.`, description)
+
+Rules:
+1. Return ONLY the JSON block, no other text.
+2. Use numbers ONLY for all fields.
+3. DO NOT include units (like "g", "kcal", etc.) in the JSON values.
+4. Estimate accurately for traditional and regional dishes.`, description)
 
 	var content string
 	var err error
@@ -63,6 +69,7 @@ Rules: Return ONLY the JSON block, no other text.`, description)
 	}
 
 	jsonStr := s.extractJSON(content)
+	jsonStr = s.cleanJSON(jsonStr)
 
 	var result models.FoodPreview
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
@@ -71,6 +78,13 @@ Rules: Return ONLY the JSON block, no other text.`, description)
 	result.Description = description
 
 	return &result, nil
+}
+
+func (s *LLMService) cleanJSON(jsonStr string) string {
+	// A bit hacky but robust: remove "g" or "kcal" when they follow a number
+	// and are followed by a quote or comma (common failure case)
+	re := regexp.MustCompile(`(\d+)\s*(g|kcal|mg|ml)`)
+	return re.ReplaceAllString(jsonStr, "$1")
 }
 
 func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult, error) {
