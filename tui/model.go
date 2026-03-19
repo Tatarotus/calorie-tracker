@@ -3,7 +3,9 @@ package tui
 import (
 	"calorie-tracker/models"
 	"calorie-tracker/services"
+
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -17,6 +19,7 @@ const (
 	ConfirmFoodView
 	TodayLogView
 	EditFoodPreviewView
+	SetGoalView
 )
 
 type Model struct {
@@ -25,7 +28,9 @@ type Model struct {
 	Stats       models.DailyStats
 	FoodInput   textinput.Model
 	WaterInput  textinput.Model
+	GoalInput   textinput.Model
 	EditInput   textinput.Model
+	Viewport    viewport.Model
 	EditField   int // 0: Cal, 1: Pro, 2: Carb, 3: Fat
 	Review      *models.ReviewResult
 	PendingFood *models.FoodPreview
@@ -44,14 +49,21 @@ func NewModel(tracker *services.TrackerService) Model {
 	wi := textinput.New()
 	wi.Placeholder = "e.g. 500"
 
+	gi := textinput.New()
+	gi.Placeholder = "e.g. I want to reach 80kg in 8 months"
+
 	ei := textinput.New()
+
+	vp := viewport.New(0, 0)
 
 	return Model{
 		Tracker:    tracker,
 		Mode:       DashboardView,
 		FoodInput:  fi,
 		WaterInput: wi,
+		GoalInput:  gi,
 		EditInput:  ei,
+		Viewport:   vp,
 	}
 }
 
@@ -70,6 +82,7 @@ var (
 
 	StyleSection = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#000000")).
 			Padding(1).
 			MarginBottom(1)
 
@@ -88,9 +101,11 @@ var (
 	StyleSuccess = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#00FF00")).
 			Bold(true)
-	
+
 	StyleHighlight = lipgloss.NewStyle().
 			Background(lipgloss.Color("#3C3C3C")).
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Bold(true)
+
+	StyleBold = lipgloss.NewStyle().Bold(true)
 )

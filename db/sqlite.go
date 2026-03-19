@@ -58,6 +58,11 @@ func (db *DB) migrate() error {
 			carbs REAL,
 			fat REAL
 		)`,
+		`CREATE TABLE IF NOT EXISTS goals (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			timestamp DATETIME,
+			description TEXT
+		)`,
 	}
 
 	for _, q := range queries {
@@ -275,6 +280,32 @@ func (db *DB) CacheFood(entry models.FoodEntry) error {
 		description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
 	)
 	return err
+}
+
+func (db *DB) SetGoal(goal models.Goal) error {
+	_, err := db.conn.Exec(
+		"INSERT INTO goals (timestamp, description) VALUES (?, ?)",
+		goal.Timestamp.UTC().Format("2006-01-02 15:04:05.999999999 -0700 MST"),
+		goal.Description,
+	)
+	return err
+}
+
+func (db *DB) GetLatestGoal() (*models.Goal, error) {
+	var g models.Goal
+	var ts string
+	err := db.conn.QueryRow(
+		"SELECT id, timestamp, description FROM goals ORDER BY timestamp DESC LIMIT 1",
+	).Scan(&g.ID, &ts, &g.Description)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	g.Timestamp = parseTimestamp(ts)
+	return &g, nil
 }
 
 func (db *DB) Close() error {

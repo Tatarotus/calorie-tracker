@@ -14,6 +14,7 @@ type (
 	FoodParsedMsg *models.FoodPreview
 	FoodSavedMsg  struct{}
 	WaterMsg      struct{}
+	GoalSavedMsg  struct{}
 	ReviewMsg     *models.ReviewResult
 	TodayLogMsg   []models.FoodEntry
 	ErrMsg        error
@@ -24,17 +25,39 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	var (
+		cmd  tea.Cmd
+		cmds []tea.Cmd
+	)
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.Width = msg.Width
 		m.Height = msg.Height
+		m.Viewport.Width = m.Width - 4
+		m.Viewport.Height = m.Height - 10
+		if m.Viewport.Height < 5 {
+			m.Viewport.Height = 5
+		}
 
 	case tea.KeyMsg:
-		// Handle global keys and mode-specific keys
+		// Global commands even in scrollable views
+		if m.Mode == ReviewView || m.Mode == TodayLogView {
+			switch msg.String() {
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			case "d":
+				m.Mode = DashboardView
+				return m, m.getStatsCmd()
+			}
+			// Let viewport handle scrolling
+			m.Viewport, cmd = m.Viewport.Update(msg)
+			return m, cmd
+		}
+
+		// Mode-specific keys
 		switch m.Mode {
-		case AddFoodView, AddWaterView:
+		case AddFoodView, AddWaterView, SetGoalView:
 			switch msg.String() {
 			case "ctrl+c":
 				return m, tea.Quit
@@ -52,6 +75,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.Error = nil
 					amount, _ := strconv.ParseFloat(m.WaterInput.Value(), 64)
 					return m, m.addWaterCmd(amount)
+				}
+				if m.Mode == SetGoalView {
+					m.Loading = true
+					m.Error = nil
+					return m, m.saveGoalCmd(m.GoalInput.Value())
 				}
 			}
 
@@ -79,16 +107,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.EditField < 3 {
 					m.EditField++
 					m.setupEditInput()
-				} else {
-					m.Mode = ConfirmFoodView
+					return m, nil
 				}
+				m.Mode = ConfirmFoodView
+				return m, nil
 			case "esc":
 				m.Mode = ConfirmFoodView
+				return m, nil
 			case "ctrl+c":
 				return m, tea.Quit
 			}
 
-		default: // Dashboard, Review, TodayLog
+		default: // Dashboard
 			switch msg.String() {
 			case "ctrl+c", "q":
 				return m, tea.Quit
@@ -113,6 +143,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Mode = TodayLogView
 				m.Loading = true
 				return m, m.getTodayLogCmd()
+			case "g":
+				m.Mode = SetGoalView
+				m.GoalInput.Focus()
+				m.GoalInput.SetValue("")
+				return m, nil
 			}
 		}
 
@@ -130,9 +165,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Mode = DashboardView
 		return m, m.getStatsCmd()
 
+	case GoalSavedMsg:
+		m.Loading = false
+		m.Mode = DashboardView
+		return m, m.getStatsCmd()
+
 	case TodayLogMsg:
 		m.Loading = false
 		m.TodayLog = []models.FoodEntry(msg)
+		m.updateViewportContent(m.renderTodayLogString())
 
 	case WaterMsg:
 		m.Loading = false
@@ -142,6 +183,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ReviewMsg:
 		m.Loading = false
 		m.Review = (*models.ReviewResult)(msg)
+		m.updateViewportContent(m.renderReviewString())
 
 	case ErrMsg:
 		m.Loading = false
@@ -151,13 +193,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Update inputs based on mode
 	if m.Mode == AddFoodView {
 		m.FoodInput, cmd = m.FoodInput.Update(msg)
+		cmds = append(cmds, cmd)
 	} else if m.Mode == AddWaterView {
 		m.WaterInput, cmd = m.WaterInput.Update(msg)
+		cmds = append(cmds, cmd)
+	} else if m.Mode == SetGoalView {
+		m.GoalInput, cmd = m.GoalInput.Update(msg)
+		cmds = append(cmds, cmd)
 	} else if m.Mode == EditFoodPreviewView {
 		m.EditInput, cmd = m.EditInput.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
-	return m, cmd
+	return m, tea.Batch(cmds...)
+}
+
+func (m *Model) updateViewportContent(content string) {
+	m.Viewport.SetContent(content)
+	m.Viewport.GotoTop()
 }
 
 func (m *Model) setupEditInput() {
@@ -225,6 +278,16 @@ func (m Model) addWaterCmd(amount float64) tea.Cmd {
 			return ErrMsg(err)
 		}
 		return WaterMsg{}
+	}
+}
+
+func (m Model) saveGoalCmd(desc string) tea.Cmd {
+	return func() tea.Msg {
+		err := m.Tracker.SetGoal(desc)
+		if err != nil {
+			return ErrMsg(err)
+		}
+		return GoalSavedMsg{}
 	}
 }
 

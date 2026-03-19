@@ -16,7 +16,6 @@ func NewTrackerService(db *db.DB, llm *LLMService) *TrackerService {
 }
 
 func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, error) {
-	// Check cache
 	if cached, err := s.db.GetCachedFood(description); err == nil && cached != nil {
 		return &models.FoodPreview{
 			Description: cached.Description,
@@ -31,10 +30,6 @@ func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, err
 	if err != nil {
 		return nil, err
 	}
-	
-	// We don't cache here yet, wait for confirmation? 
-	// The requirement says "Before calling LLM: Check cache first".
-	// Let's cache it after the user confirms.
 	return preview, nil
 }
 
@@ -47,12 +42,9 @@ func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 		Carbs:       preview.Carbs,
 		Fat:         preview.Fat,
 	}
-	
 	if err := s.db.AddFoodEntry(entry); err != nil {
 		return err
 	}
-	
-	// Cache the confirmed entry
 	return s.db.CacheFood(entry)
 }
 
@@ -93,7 +85,31 @@ func (s *TrackerService) GetTodayFoodEntries() ([]models.FoodEntry, error) {
 	return s.db.GetDailyFoodEntries(time.Now())
 }
 
+func (s *TrackerService) SetGoal(description string) error {
+	goal := models.Goal{
+		Timestamp:   time.Now(),
+		Description: description,
+	}
+	return s.db.SetGoal(goal)
+}
+
+func (s *TrackerService) GetGoal() (string, error) {
+	goal, err := s.db.GetLatestGoal()
+	if err != nil {
+		return "", err
+	}
+	if goal == nil {
+		return "No goal set", nil
+	}
+	return goal.Description, nil
+}
+
 func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
+	goal, err := s.GetGoal()
+	if err != nil {
+		goal = "No goal set"
+	}
+
 	stats, err := s.db.GetStatsRange(7)
 	if err != nil {
 		return nil, err
@@ -117,6 +133,7 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 	}
 
 	data := models.ReviewData{
+		Goal:    goal,
 		Days:    stats,
 		Entries: simpleEntries,
 	}

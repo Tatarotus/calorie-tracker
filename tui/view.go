@@ -21,6 +21,8 @@ func (m Model) View() string {
 			msg = "📊 Generating your review..."
 		case ConfirmFoodView:
 			msg = "💾 Saving to database..."
+		case SetGoalView:
+			msg = "🎯 Setting your goal..."
 		}
 		s += msg + "\n"
 	} else if m.Error != nil {
@@ -41,11 +43,20 @@ func (m Model) View() string {
 			s += m.todayLogView()
 		case EditFoodPreviewView:
 			s += m.editFoodPreviewView()
+		case SetGoalView:
+			s += m.setGoalView()
 		}
 	}
 
 	s += "\n" + m.helpView()
 	return lipgloss.Place(m.Width, m.Height, lipgloss.Center, lipgloss.Center, s)
+}
+
+func (m Model) setGoalView() string {
+	return StyleSection.Render(
+		StyleHeader.Render("🎯 Set Your Health Goal") + "\n\n" +
+			m.GoalInput.View(),
+	)
 }
 
 func (m Model) dashboardView() string {
@@ -110,7 +121,7 @@ func (m Model) editFoodPreviewView() string {
 	return StyleSection.Render(sb.String())
 }
 
-func (m Model) todayLogView() string {
+func (m Model) renderTodayLogString() string {
 	var sb strings.Builder
 	sb.WriteString(StyleHeader.Render("📅 Today's Food Log") + "\n\n")
 	
@@ -124,10 +135,15 @@ func (m Model) todayLogView() string {
 		}
 		sb.WriteString("\n" + StyleHeader.Render(fmt.Sprintf("Total: %.0f kcal", total)))
 	}
-	return StyleSection.Render(sb.String())
+	// Wrap text to fit viewport
+	return lipgloss.NewStyle().Width(58).Render(sb.String())
 }
 
-func (m Model) reviewView() string {
+func (m Model) todayLogView() string {
+	return StyleSection.Render(m.Viewport.View())
+}
+
+func (m Model) renderReviewString() string {
 	if m.Review == nil {
 		return "Starting AI Review..."
 	}
@@ -147,6 +163,11 @@ func (m Model) reviewView() string {
 		scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)), 
 		StyleHighlight.Render(strings.ToUpper(r.Progress))))
 	
+	if r.GoalProgress != "" {
+		sb.WriteString(StyleHeader.Render("🎯 Progress Towards Goal") + "\n")
+		sb.WriteString(r.GoalProgress + "\n\n")
+	}
+
 	sb.WriteString(StyleHeader.Render("Summary") + "\n")
 	sb.WriteString(r.Summary + "\n\n")
 	
@@ -173,7 +194,13 @@ func (m Model) reviewView() string {
 		}
 	}
 
-	return StyleSection.Width(60).Render(sb.String())
+	// Wrap text to fit viewport
+	return lipgloss.NewStyle().Width(58).Render(sb.String())
+}
+
+func (m Model) reviewView() string {
+	// Let viewport handle the width to prevent double wrapping or duplication issues
+	return StyleSection.Render(m.Viewport.View())
 }
 
 func (m Model) helpView() string {
@@ -183,10 +210,12 @@ func (m Model) helpView() string {
 		help = "y: confirm • n: discard • e: edit • q: quit"
 	case EditFoodPreviewView:
 		help = "enter: next/save • esc: cancel • q: quit"
-	case AddFoodView, AddWaterView:
+	case AddFoodView, AddWaterView, SetGoalView:
 		help = "enter: submit • esc: back • q: quit"
+	case ReviewView, TodayLogView:
+		help = "↑/↓: scroll • d: dashboard • q: quit"
 	default:
-		help = "d: dashboard • a: add food • w: add water • t: today log • r: review • q: quit"
+		help = "d: dashboard • a: add food • w: add water • g: set goal • t: today log • r: review • q: quit"
 	}
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render(help)
 }

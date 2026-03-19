@@ -76,10 +76,14 @@ Rules: Return ONLY the JSON block, no other text.`, description)
 func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult, error) {
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
 	prompt := fmt.Sprintf(`You are a nutrition and performance analyst.
-Analyze the following user data.
+Analyze the following user data against their current goal.
+
+Goal: %s
+
 Return a JSON response with EXACTLY this structure:
 {
   "summary": "string",
+  "goal_progress": "string (detailed evaluation of progress towards the specific goal)",
   "progress": "improving" | "stable" | "regressing",
   "score": number,
   "issues": ["string"],
@@ -91,10 +95,10 @@ Data:
 %s
 
 Rules:
-1. Base ONLY on the provided data.
+1. Base ONLY on the provided data and evaluate specifically against the Goal.
 2. Be specific, no generic advice.
 3. Return ONLY a valid JSON block.
-4. Use lowercase keys as shown above.`, string(jsonData))
+4. Use lowercase keys as shown above.`, data.Goal, string(jsonData))
 
 	var content string
 	var err error
