@@ -1,0 +1,96 @@
+package tui
+
+import (
+	"calorie-tracker/models"
+	"calorie-tracker/services"
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/lipgloss"
+)
+
+type ViewMode int
+
+const (
+	DashboardView ViewMode = iota
+	AddFoodView
+	AddWaterView
+	ReviewView
+	ConfirmFoodView
+	TodayLogView
+	EditFoodPreviewView
+)
+
+type Model struct {
+	Tracker     *services.TrackerService
+	Mode        ViewMode
+	Stats       models.DailyStats
+	FoodInput   textinput.Model
+	WaterInput  textinput.Model
+	EditInput   textinput.Model
+	EditField   int // 0: Cal, 1: Pro, 2: Carb, 3: Fat
+	Review      *models.ReviewResult
+	PendingFood *models.FoodPreview
+	TodayLog    []models.FoodEntry
+	Loading     bool
+	Error       error
+	Width       int
+	Height      int
+}
+
+func NewModel(tracker *services.TrackerService) Model {
+	fi := textinput.New()
+	fi.Placeholder = "e.g. 2 eggs and a coffee"
+	fi.Focus()
+
+	wi := textinput.New()
+	wi.Placeholder = "e.g. 500"
+
+	ei := textinput.New()
+
+	return Model{
+		Tracker:    tracker,
+		Mode:       DashboardView,
+		FoodInput:  fi,
+		WaterInput: wi,
+		EditInput:  ei,
+	}
+}
+
+var (
+	StyleTitle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA")).
+			Background(lipgloss.Color("#7D56F4")).
+			Padding(0, 1).
+			MarginBottom(1)
+
+	StyleHeader = lipgloss.NewStyle().
+			Bold(true).
+			Underline(true).
+			MarginBottom(1)
+
+	StyleSection = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			Padding(1).
+			MarginBottom(1)
+
+	StyleStats = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#04B575")).
+			Bold(true)
+
+	StyleError = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")).
+			Bold(true)
+
+	StyleWarning = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFA500")).
+			Bold(true)
+
+	StyleSuccess = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FF00")).
+			Bold(true)
+	
+	StyleHighlight = lipgloss.NewStyle().
+			Background(lipgloss.Color("#3C3C3C")).
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Bold(true)
+)
