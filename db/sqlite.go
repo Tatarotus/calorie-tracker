@@ -282,6 +282,24 @@ func (db *DB) CacheFood(entry models.FoodEntry) error {
 	return err
 }
 
+func (db *DB) GetAllCacheEntries() ([]models.FoodEntry, error) {
+	rows, err := db.conn.Query("SELECT description, calories, protein, carbs, fat FROM food_cache")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.FoodEntry
+	for rows.Next() {
+		var e models.FoodEntry
+		if err := rows.Scan(&e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
 func (db *DB) SetGoal(goal models.Goal) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO goals (timestamp, description) VALUES (?, ?)",

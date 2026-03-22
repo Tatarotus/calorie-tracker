@@ -7,23 +7,22 @@ import (
 )
 
 type TrackerService struct {
-	db  *db.DB
-	llm *LLMService
+	db      *db.DB
+	llm     *LLMService
+	matcher *FoodMatcher
 }
 
 func NewTrackerService(db *db.DB, llm *LLMService) *TrackerService {
-	return &TrackerService{db: db, llm: llm}
+	return &TrackerService{
+		db:      db,
+		llm:     llm,
+		matcher: NewFoodMatcher(db),
+	}
 }
 
 func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, error) {
-	if cached, err := s.db.GetCachedFood(description); err == nil && cached != nil {
-		return &models.FoodPreview{
-			Description: cached.Description,
-			Calories:    cached.Calories,
-			Protein:     cached.Protein,
-			Carbs:       cached.Carbs,
-			Fat:         cached.Fat,
-		}, nil
+	if matched, err := s.matcher.Match(description); err == nil && matched != nil {
+		return matched, nil
 	}
 
 	preview, err := s.llm.ParseFood(description)
