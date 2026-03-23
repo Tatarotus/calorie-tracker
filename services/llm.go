@@ -81,10 +81,16 @@ Rules:
 }
 
 func (s *LLMService) cleanJSON(jsonStr string) string {
-	// A bit hacky but robust: remove "g" or "kcal" when they follow a number
-	// and are followed by a quote or comma (common failure case)
-	re := regexp.MustCompile(`(\d+)\s*(g|kcal|mg|ml)`)
-	return re.ReplaceAllString(jsonStr, "$1")
+	// 1. Remove units like "g", "kcal", etc. when they follow a number
+	reUnits := regexp.MustCompile(`(\d+(?:\.\d+)?)\s*(g|kcal|mg|ml|units|unidades|fatias|fatia)`)
+	jsonStr = reUnits.ReplaceAllString(jsonStr, "$1")
+
+	// 2. Remove quotes around numbers (e.g., "calories": "100" -> "calories": 100)
+	// This ensures json.Unmarshal can handle them as float64
+	reQuotes := regexp.MustCompile(`"(\d+(?:\.\d+)?)"`)
+	jsonStr = reQuotes.ReplaceAllString(jsonStr, "$1")
+
+	return jsonStr
 }
 
 func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult, error) {

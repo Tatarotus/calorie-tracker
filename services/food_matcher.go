@@ -110,6 +110,8 @@ func (m *FoodMatcher) normalizeName(name string) string {
 				return strings.TrimSuffix(word, "s")
 			} else if strings.HasSuffix(word, "oes") {
 				return strings.TrimSuffix(word, "oes") + "ao"
+			} else if strings.HasSuffix(word, "aes") {
+				return strings.TrimSuffix(word, "aes") + "ao"
 			}
 		}
 		return word
