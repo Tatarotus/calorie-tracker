@@ -3,6 +3,7 @@ package services
 import (
 	"calorie-tracker/db"
 	"calorie-tracker/models"
+	"fmt"
 	"time"
 )
 
@@ -21,7 +22,14 @@ func NewTrackerService(db *db.DB, llm *LLMService) *TrackerService {
 }
 
 func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, error) {
-	if matched, err := s.matcher.Match(description); err == nil && matched != nil {
+	matched, err := s.matcher.Match(description)
+	if err != nil {
+		// Log error but maybe continue to LLM? 
+		// Actually, if it's a DB error, we might want to know.
+		// For now, let's at least not ignore it if we want to debug.
+		return nil, fmt.Errorf("cache match error: %w", err)
+	}
+	if matched != nil {
 		return matched, nil
 	}
 

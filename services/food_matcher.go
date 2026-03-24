@@ -28,9 +28,9 @@ type ParsedFood struct {
 }
 
 // Regex to capture [amount][unit] [name]
-// e.g., "100g de arroz" -> "100", "g", "de arroz"
+// e.g., "100g de arroz" -> "100", "g", "arroz"
 // e.g., "1 pão" -> "1", "", "pão"
-var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*([a-zA-Záàâãéèêíïóôõöúçñ\-]*)?(?:\s+de\s+|\s+)(.*)$`)
+var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*([a-zA-Záàâãéèêíïóôõöúçñ\-]*)?\s+(?:de\s+)?(.*)$`)
 
 func (m *FoodMatcher) removeAccents(s string) string {
 	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
@@ -40,6 +40,11 @@ func (m *FoodMatcher) removeAccents(s string) string {
 
 func (m *FoodMatcher) Parse(desc string) ParsedFood {
 	desc = strings.ToLower(strings.TrimSpace(desc))
+	
+	// Pre-normalize: remove some common words that might confuse the regex
+	desc = strings.TrimPrefix(desc, "cerca de ")
+	desc = strings.TrimPrefix(desc, "aproximadamente ")
+
 	matches := foodRegex.FindStringSubmatch(desc)
 	
 	if len(matches) < 4 {
@@ -54,11 +59,6 @@ func (m *FoodMatcher) Parse(desc string) ParsedFood {
 	amount, _ := strconv.ParseFloat(matches[1], 64)
 	unit := m.normalizeUnit(matches[2])
 	name := m.normalizeName(matches[3])
-
-	// If it looks like it was "1 ovo frito", unit="ovo", name="frito"
-	// and we want to match "5 ovos fritos", unit="ovo", name="frito"
-	// The current logic does this because normalizeUnit and normalizeName
-	// both remove plurals and accents.
 
 	return ParsedFood{
 		Amount: amount,
@@ -97,10 +97,9 @@ func (m *FoodMatcher) normalizeUnit(unit string) string {
 
 func (m *FoodMatcher) normalizeName(name string) string {
 	name = m.removeAccents(strings.ToLower(strings.TrimSpace(name)))
+	// Remove common connectors and filler words
 	name = strings.TrimPrefix(name, "de ")
-	
-	// Split by whitespace and hyphens to normalize each part
-	// We want to preserve hyphens, so we'll use a regex split or manual handling
+	name = strings.TrimSuffix(name, ".")
 	
 	processWord := func(word string) string {
 		if len(word) > 3 {
@@ -117,16 +116,14 @@ func (m *FoodMatcher) normalizeName(name string) string {
 		return word
 	}
 
-	// Handle parts separated by spaces or hyphens
-	re := regexp.MustCompile(`([a-zA-Z0-9]+)|([^a-zA-Z0-9]+)`)
-	matches := re.FindAllString(name, -1)
-	for i, part := range matches {
-		if regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(part) {
-			matches[i] = processWord(part)
-		}
+	// Handle parts separated by spaces, hyphens, or other common separators
+	re := regexp.MustCompile(`([a-zA-Z0-9]+)`)
+	parts := re.FindAllString(name, -1)
+	for i, part := range parts {
+		parts[i] = processWord(part)
 	}
 	
-	return strings.Join(matches, "")
+	return strings.Join(parts, " ")
 }
 
 func (m *FoodMatcher) Match(query string) (*models.FoodPreview, error) {
@@ -151,10 +148,10 @@ func (m *FoodMatcher) Match(query string) (*models.FoodPreview, error) {
 		return nil, err
 	}
 
+	// First pass: look for exact name and unit match (standard scaling)
 	for _, entry := range entries {
 		c := m.Parse(entry.Description)
 		
-		// If names match (already normalized in Parse) and units match, we can calculate
 		if q.Name == c.Name && q.Unit == c.Unit {
 			ratio := q.Amount / c.Amount
 			return &models.FoodPreview{
@@ -164,6 +161,42 @@ func (m *FoodMatcher) Match(query string) (*models.FoodPreview, error) {
 				Carbs:       entry.Carbs * ratio,
 				Fat:         entry.Fat * ratio,
 			}, nil
+		}
+	}
+
+	// Second pass: if query has a unit (like "g") but cache entry has NO unit (just name)
+	// we assume the cache entry is for 100g if unit is "g", or just 1 portion if query has no unit.
+	// This handles "200g rice" matching "rice" entry.
+	for _, entry := range entries {
+		c := m.Parse(entry.Description)
+		if q.Name == c.Name {
+			// If cache has just "name" and query is "amount unit name"
+			if c.Unit == "" && q.Unit == "g" {
+				// We assume the cache entry was a standard 100g portion if it's "arroz",
+				// but LLM usually returns per portion. 
+				// Actually, many users expect "arroz" to mean 100g when matched with "g".
+				// Let's assume the cache entry "arroz" represents 100g for scaling.
+				ratio := q.Amount / 100.0
+				return &models.FoodPreview{
+					Description: query,
+					Calories:    entry.Calories * ratio,
+					Protein:     entry.Protein * ratio,
+					Carbs:       entry.Carbs * ratio,
+					Fat:         entry.Fat * ratio,
+				}, nil
+			}
+			
+			// If both have no unit, it's just a different amount of the same thing (e.g., 1 pão vs 2 pães)
+			if c.Unit == "" && q.Unit == "" {
+				ratio := q.Amount / c.Amount
+				return &models.FoodPreview{
+					Description: query,
+					Calories:    entry.Calories * ratio,
+					Protein:     entry.Protein * ratio,
+					Carbs:       entry.Carbs * ratio,
+					Fat:         entry.Fat * ratio,
+				}, nil
+			}
 		}
 	}
 

@@ -14,14 +14,16 @@ import (
 type DB struct {
 	conn *sql.DB
 }
-
 func NewDB() (*DB, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
 	dbPath := filepath.Join(home, ".calorie_tracker.db")
+	return NewTestDB(dbPath)
+}
 
+func NewTestDB(dbPath string) (*DB, error) {
 	conn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
@@ -33,6 +35,11 @@ func NewDB() (*DB, error) {
 	}
 
 	return db, nil
+}
+
+
+func (db *DB) GetConn() *sql.DB {
+	return db.conn
 }
 
 func (db *DB) migrate() error {
@@ -99,7 +106,7 @@ func parseTimestamp(ts string) time.Time {
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
-		entry.Timestamp.Format(time.RFC3339Nano), 
+		entry.Timestamp.UTC().Format(time.RFC3339Nano), 
 		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
 	)
 	return err
@@ -108,18 +115,24 @@ func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 func (db *DB) AddWaterEntry(entry models.WaterEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO water_entries (timestamp, amount_ml) VALUES (?, ?)",
-		entry.Timestamp.Format(time.RFC3339Nano),
+		entry.Timestamp.UTC().Format(time.RFC3339Nano),
 		entry.AmountML,
 	)
 	return err
 }
 
 func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
-	dateStr := t.Format("2006-01-02")
+	// Ensure t is evaluated in its local timezone context
+	t = t.Local()
+	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+	// Convert it to UTC to match stored 'Z' timestamps
+	startUTC := startOfDay.UTC()
+	endUTC := startUTC.Add(24 * time.Hour)
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE strftime('%Y-%m-%d', timestamp, 'localtime') = ?",
-		dateStr,
+		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? AND timestamp < ?",
+		startUTC.Format(time.RFC3339Nano),
+		endUTC.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return nil, err
@@ -133,18 +146,22 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		e.Timestamp = parseTimestamp(ts)
+		e.Timestamp = parseTimestamp(ts).Local()
 		entries = append(entries, e)
 	}
 	return entries, nil
 }
 
 func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
-	dateStr := t.Format("2006-01-02")
+	t = t.Local()
+	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+	startUTC := startOfDay.UTC()
+	endUTC := startUTC.Add(24 * time.Hour)
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, amount_ml FROM water_entries WHERE strftime('%Y-%m-%d', timestamp, 'localtime') = ?",
-		dateStr,
+		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? AND timestamp < ?",
+		startUTC.Format(time.RFC3339Nano),
+		endUTC.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return nil, err
@@ -158,7 +175,7 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
 			return nil, err
 		}
-		e.Timestamp = parseTimestamp(ts)
+		e.Timestamp = parseTimestamp(ts).Local()
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -168,14 +185,14 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	// We use the last N days relative to now local
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStart := todayStart.AddDate(0, 0, -days)
+	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
 
 	// For strftime to work reliably, we use RFC3339 which is ISO8601
 	// We want to group by the LOCAL date, so we tell SQLite to convert to local time
 	// if it can, but since our format has Z or timezone, SQLite handles it.
 	query := `
 		SELECT 
-			strftime('%Y-%m-%d', timestamp, 'localtime') as date,
+			strftime('%Y-%m-%d', datetime(timestamp, 'localtime')) as date,
 			SUM(calories) as calories,
 			SUM(protein) as protein,
 			SUM(carbs) as carbs,
@@ -186,7 +203,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		GROUP BY date
 		UNION ALL
 		SELECT 
-			strftime('%Y-%m-%d', timestamp, 'localtime') as date,
+			strftime('%Y-%m-%d', datetime(timestamp, 'localtime')) as date,
 			0 as calories,
 			0 as protein,
 			0 as carbs,
@@ -198,8 +215,8 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	`
 	
 	rows, err := db.conn.Query(query, 
-		rangeStart.Format(time.RFC3339Nano), 
-		rangeStart.Format(time.RFC3339Nano))
+		rangeStartUTC.Format(time.RFC3339Nano), 
+		rangeStartUTC.Format(time.RFC3339Nano))
 	if err != nil {
 		return nil, err
 	}
@@ -235,11 +252,11 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStart := todayStart.AddDate(0, 0, -days)
+	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
 
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
-		rangeStart.Format(time.RFC3339Nano),
+		rangeStartUTC.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return nil, err
@@ -253,7 +270,7 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
 			return nil, err
 		}
-		e.Timestamp = parseTimestamp(ts)
+		e.Timestamp = parseTimestamp(ts).Local()
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -262,11 +279,11 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStart := todayStart.AddDate(0, 0, -days)
+	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
 
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
-		rangeStart.Format(time.RFC3339Nano),
+		rangeStartUTC.Format(time.RFC3339Nano),
 	)
 	if err != nil {
 		return nil, err
@@ -280,7 +297,7 @@ func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
 		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
 			return nil, err
 		}
-		e.Timestamp = parseTimestamp(ts)
+		e.Timestamp = parseTimestamp(ts).Local()
 		entries = append(entries, e)
 	}
 	return entries, nil
