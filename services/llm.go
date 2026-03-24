@@ -100,15 +100,20 @@ Analyze the following user data against their current goal.
 
 Goal: %s
 
+Data includes:
+- Daily summarized stats (calories, protein, carbs, fat, water)
+- Individual food entries
+- Individual water entries
+
 Return a JSON response with EXACTLY this structure:
 {
-  "summary": "string",
+  "summary": "string (concise overall evaluation)",
   "goal_progress": "string (detailed evaluation of progress towards the specific goal)",
   "progress": "improving" | "stable" | "regressing",
-  "score": number,
-  "issues": ["string"],
-  "suggestions": ["string"],
-  "patterns": ["string"]
+  "score": number (0-100 based on consistency and goal alignment),
+  "issues": ["string (specific concerns about nutrition, macros, or hydration)"],
+  "suggestions": ["string (actionable advice)"],
+  "patterns": ["string (identified habits or trends)"]
 }
 
 Data:
@@ -116,9 +121,10 @@ Data:
 
 Rules:
 1. Base ONLY on the provided data and evaluate specifically against the Goal.
-2. Be specific, no generic advice.
-3. Return ONLY a valid JSON block.
-4. Use lowercase keys as shown above.`, data.Goal, string(jsonData))
+2. Analyze macro-nutrient balance (protein, carbs, fat) and hydration levels.
+3. Be specific, no generic advice.
+4. Return ONLY a valid JSON block.
+5. Use lowercase keys as shown above.`, data.Goal, string(jsonData))
 
 	var content string
 	var err error

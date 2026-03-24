@@ -18,6 +18,9 @@ type (
 	GoalDescriptionMsg string
 	ReviewMsg          *models.ReviewResult
 	TodayLogMsg        []models.FoodEntry
+	WeekLogMsg         []models.FoodEntry
+	MonthLogMsg        []models.FoodEntry
+	RecentLogMsg       []models.FoodEntry
 	ErrMsg             error
 )
 
@@ -41,20 +44,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			vpWidth = 60
 		}
 		m.Viewport.Width = vpWidth
-		m.Viewport.Height = m.Height - 14 // Increased to accommodate sticky header
+		m.Viewport.Height = m.Height - 16 // Increased to accommodate sticky header
 		if m.Viewport.Height < 5 {
 			m.Viewport.Height = 5
 		}
 
 	case tea.KeyMsg:
 		// Global commands even in scrollable views
-		if m.Mode == ReviewView || m.Mode == TodayLogView {
+		if m.Mode == ReviewView || m.Mode == TodayLogView || m.Mode == WeekLogView || m.Mode == MonthLogView {
 			switch msg.String() {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 			case "d":
 				m.Mode = DashboardView
 				return m, m.getStatsCmd()
+			case "t":
+				m.Mode = TodayLogView
+				m.Loading = true
+				return m, m.getTodayLogCmd()
+			case "7":
+				m.Mode = WeekLogView
+				m.Loading = true
+				return m, m.getWeekLogCmd()
+			case "m":
+				m.Mode = MonthLogView
+				m.Loading = true
+				return m, m.getMonthLogCmd()
 			}
 			// Let viewport handle scrolling
 			m.Viewport, cmd = m.Viewport.Update(msg)
@@ -149,6 +164,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Mode = TodayLogView
 				m.Loading = true
 				return m, m.getTodayLogCmd()
+			case "7":
+				m.Mode = WeekLogView
+				m.Loading = true
+				return m, m.getWeekLogCmd()
+			case "m":
+				m.Mode = MonthLogView
+				m.Loading = true
+				return m, m.getMonthLogCmd()
 			case "g":
 				m.Mode = SetGoalView
 				m.GoalInput.Focus()
@@ -183,6 +206,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Loading = false
 		m.TodayLog = []models.FoodEntry(msg)
 		m.updateViewportContent(m.renderTodayLogString())
+
+	case WeekLogMsg:
+		m.Loading = false
+		m.WeekLog = []models.FoodEntry(msg)
+		m.updateViewportContent(m.renderWeekLogString())
+
+	case MonthLogMsg:
+		m.Loading = false
+		m.MonthLog = []models.FoodEntry(msg)
+		m.updateViewportContent(m.renderMonthLogString())
+
+	case RecentLogMsg:
+		m.RecentLog = []models.FoodEntry(msg)
 
 	case WaterMsg:
 		m.Loading = false
@@ -256,7 +292,14 @@ func (m Model) getStatsCmd() tea.Cmd {
 		if err != nil {
 			return ErrMsg(err)
 		}
-		return StatsMsg(stats)
+		
+		// In parallel, get recent entries for the dashboard
+		recent, _ := m.Tracker.GetFoodEntriesRange(1) // last 24h
+		
+		return tea.Batch(
+			func() tea.Msg { return StatsMsg(stats) },
+			func() tea.Msg { return RecentLogMsg(recent) },
+		)()
 	}
 }
 
@@ -327,5 +370,25 @@ func (m Model) getTodayLogCmd() tea.Cmd {
 			return ErrMsg(err)
 		}
 		return TodayLogMsg(entries)
+	}
+}
+
+func (m Model) getWeekLogCmd() tea.Cmd {
+	return func() tea.Msg {
+		entries, err := m.Tracker.GetFoodEntriesRange(7)
+		if err != nil {
+			return ErrMsg(err)
+		}
+		return WeekLogMsg(entries)
+	}
+}
+
+func (m Model) getMonthLogCmd() tea.Cmd {
+	return func() tea.Msg {
+		entries, err := m.Tracker.GetFoodEntriesRange(30)
+		if err != nil {
+			return ErrMsg(err)
+		}
+		return MonthLogMsg(entries)
 	}
 }

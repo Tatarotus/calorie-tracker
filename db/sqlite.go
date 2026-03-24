@@ -99,7 +99,7 @@ func parseTimestamp(ts string) time.Time {
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
-		entry.Timestamp.UTC().Format(time.RFC3339Nano), 
+		entry.Timestamp.Format(time.RFC3339Nano), 
 		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
 	)
 	return err
@@ -108,21 +108,18 @@ func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 func (db *DB) AddWaterEntry(entry models.WaterEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO water_entries (timestamp, amount_ml) VALUES (?, ?)",
-		entry.Timestamp.UTC().Format(time.RFC3339Nano),
+		entry.Timestamp.Format(time.RFC3339Nano),
 		entry.AmountML,
 	)
 	return err
 }
 
 func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
-	// Calculate range in local time then convert to UTC
-	start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UTC()
-	end := start.Add(24 * time.Hour)
+	dateStr := t.Format("2006-01-02")
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? AND timestamp < ?",
-		start.Format(time.RFC3339Nano), 
-		end.Format(time.RFC3339Nano),
+		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE strftime('%Y-%m-%d', timestamp, 'localtime') = ?",
+		dateStr,
 	)
 	if err != nil {
 		return nil, err
@@ -143,13 +140,11 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 }
 
 func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
-	start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).UTC()
-	end := start.Add(24 * time.Hour)
+	dateStr := t.Format("2006-01-02")
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? AND timestamp < ?",
-		start.Format(time.RFC3339Nano), 
-		end.Format(time.RFC3339Nano),
+		"SELECT id, timestamp, amount_ml FROM water_entries WHERE strftime('%Y-%m-%d', timestamp, 'localtime') = ?",
+		dateStr,
 	)
 	if err != nil {
 		return nil, err
@@ -173,7 +168,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	// We use the last N days relative to now local
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStart := todayStart.AddDate(0, 0, -days).UTC()
+	rangeStart := todayStart.AddDate(0, 0, -days)
 
 	// For strftime to work reliably, we use RFC3339 which is ISO8601
 	// We want to group by the LOCAL date, so we tell SQLite to convert to local time
@@ -240,7 +235,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStart := todayStart.AddDate(0, 0, -days).UTC()
+	rangeStart := todayStart.AddDate(0, 0, -days)
 
 	rows, err := db.conn.Query(
 		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
@@ -256,6 +251,33 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 		var e models.FoodEntry
 		var ts string
 		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+			return nil, err
+		}
+		e.Timestamp = parseTimestamp(ts)
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
+func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	rangeStart := todayStart.AddDate(0, 0, -days)
+
+	rows, err := db.conn.Query(
+		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
+		rangeStart.Format(time.RFC3339Nano),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.WaterEntry
+	for rows.Next() {
+		var e models.WaterEntry
+		var ts string
+		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
 			return nil, err
 		}
 		e.Timestamp = parseTimestamp(ts)
@@ -312,7 +334,7 @@ func (db *DB) GetAllCacheEntries() ([]models.FoodEntry, error) {
 func (db *DB) SetGoal(goal models.Goal) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO goals (timestamp, description) VALUES (?, ?)",
-		goal.Timestamp.UTC().Format(time.RFC3339Nano),
+		goal.Timestamp.Format(time.RFC3339Nano),
 		goal.Description,
 	)
 	return err

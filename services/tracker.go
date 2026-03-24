@@ -84,6 +84,10 @@ func (s *TrackerService) GetTodayFoodEntries() ([]models.FoodEntry, error) {
 	return s.db.GetDailyFoodEntries(time.Now())
 }
 
+func (s *TrackerService) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
+	return s.db.GetFoodEntriesRange(days)
+}
+
 func (s *TrackerService) SetGoal(description string) error {
 	goal := models.Goal{
 		Timestamp:   time.Now(),
@@ -114,15 +118,32 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 		return nil, err
 	}
 	
-	entries, err := s.db.GetFoodEntriesRange(7)
+	// Create a map for easy lookup and ensure we have all 7 days (including today)
+	statsMap := make(map[string]models.DailyStats)
+	for _, st := range stats {
+		statsMap[st.Date] = st
+	}
+
+	now := time.Now()
+	allDays := make([]models.DailyStats, 0, 7)
+	for i := 6; i >= 0; i-- {
+		dateStr := now.AddDate(0, 0, -i).Format("2006-01-02")
+		if st, ok := statsMap[dateStr]; ok {
+			allDays = append(allDays, st)
+		} else {
+			allDays = append(allDays, models.DailyStats{Date: dateStr})
+		}
+	}
+	
+	foodEntries, err := s.db.GetFoodEntriesRange(7)
 	if err != nil {
 		return nil, err
 	}
 	
-	simpleEntries := make([]models.FoodEntrySimple, len(entries))
-	for i, e := range entries {
-		simpleEntries[i] = models.FoodEntrySimple{
-			Date:        e.Timestamp.Format("2006-01-02"),
+	simpleFoodEntries := make([]models.FoodEntrySimple, len(foodEntries))
+	for i, e := range foodEntries {
+		simpleFoodEntries[i] = models.FoodEntrySimple{
+			Date:        e.Timestamp.Local().Format("2006-01-02"),
 			Description: e.Description,
 			Calories:    e.Calories,
 			Protein:     e.Protein,
@@ -131,10 +152,24 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 		}
 	}
 
+	waterEntries, err := s.db.GetWaterEntriesRange(7)
+	if err != nil {
+		return nil, err
+	}
+	
+	simpleWaterEntries := make([]models.WaterEntrySimple, len(waterEntries))
+	for i, e := range waterEntries {
+		simpleWaterEntries[i] = models.WaterEntrySimple{
+			Date:     e.Timestamp.Local().Format("2006-01-02"),
+			AmountML: e.AmountML,
+		}
+	}
+
 	data := models.ReviewData{
-		Goal:    goal,
-		Days:    stats,
-		Entries: simpleEntries,
+		Goal:         goal,
+		Days:         allDays,
+		FoodEntries:  simpleFoodEntries,
+		WaterEntries: simpleWaterEntries,
 	}
 	
 	return s.llm.AnalyzeReview(data)

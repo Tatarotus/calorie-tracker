@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"calorie-tracker/models"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -43,6 +44,10 @@ func (m Model) View() string {
 			s += m.confirmFoodView()
 		case TodayLogView:
 			s += m.todayLogView()
+		case WeekLogView:
+			s += m.weekLogView()
+		case MonthLogView:
+			s += m.monthLogView()
 		case EditFoodPreviewView:
 			s += m.editFoodPreviewView()
 		case SetGoalView:
@@ -67,7 +72,7 @@ func (m Model) dashboardView() string {
 		goalInfo = m.renderGoalComparison() + "\n\n"
 	}
 
-	content := fmt.Sprintf(
+	statsContent := fmt.Sprintf(
 		"%sDaily Totals (%s)\n\n"+
 			"Calories: %s\n"+
 			"Protein:  %s g\n"+
@@ -82,7 +87,22 @@ func (m Model) dashboardView() string {
 		StyleStats.Render(fmt.Sprintf("%.1f", m.Stats.Fat)),
 		StyleStats.Render(fmt.Sprintf("%.0f", m.Stats.WaterML)),
 	)
-	return StyleSection.Render(content)
+
+	var recentContent string
+	if len(m.RecentLog) > 0 {
+		recentContent = "\n\n" + StyleHeader.Render("🕒 Recent Entries") + "\n"
+		// Show last 3 entries
+		max := 3
+		if len(m.RecentLog) < max {
+			max = len(m.RecentLog)
+		}
+		for i := 0; i < max; i++ {
+			e := m.RecentLog[i]
+			recentContent += fmt.Sprintf("• %s (%s kcal)\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories)))
+		}
+	}
+
+	return StyleSection.Render(statsContent + recentContent)
 }
 
 func (m Model) renderGoalComparison() string {
@@ -175,6 +195,50 @@ func (m Model) todayLogView() string {
 	return StyleSection.Render(header + m.Viewport.View())
 }
 
+func (m Model) renderWeekLogString() string {
+	return m.renderRangeLogString(m.WeekLog, "Last 7 Days")
+}
+
+func (m Model) weekLogView() string {
+	header := StyleHeader.Render("📅 Weekly Food Log (Last 7 Days)") + "\n\n"
+	return StyleSection.Render(header + m.Viewport.View())
+}
+
+func (m Model) renderMonthLogString() string {
+	return m.renderRangeLogString(m.MonthLog, "Last 30 Days")
+}
+
+func (m Model) monthLogView() string {
+	header := StyleHeader.Render("📅 Monthly Food Log (Last 30 Days)") + "\n\n"
+	return StyleSection.Render(header + m.Viewport.View())
+}
+
+func (m Model) renderRangeLogString(entries []models.FoodEntry, title string) string {
+	var sb strings.Builder
+	
+	if len(entries) == 0 {
+		sb.WriteString("No entries found in this range.")
+	} else {
+		currentDate := ""
+		var dayTotal float64
+		for _, e := range entries {
+			date := e.Timestamp.Local().Format("2006-01-02")
+			if date != currentDate {
+				if currentDate != "" {
+					sb.WriteString(fmt.Sprintf("  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n\n", dayTotal))
+				}
+				sb.WriteString(StyleHeader.Render(date) + "\n")
+				currentDate = date
+				dayTotal = 0
+			}
+			sb.WriteString(fmt.Sprintf("• %s (%s kcal)\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories))))
+			dayTotal += e.Calories
+		}
+		sb.WriteString(fmt.Sprintf("  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n", dayTotal))
+	}
+	return lipgloss.NewStyle().Width(58).Render(sb.String())
+}
+
 func (m Model) renderReviewString() string {
 	if m.Review == nil {
 		return "Starting AI Review..."
@@ -250,10 +314,10 @@ func (m Model) helpView() string {
 		help = "enter: next/save • esc: cancel • q: quit"
 	case AddFoodView, AddWaterView, SetGoalView:
 		help = "enter: submit • esc: back • q: quit"
-	case ReviewView, TodayLogView:
-		help = "↑/↓: scroll • d: dashboard • q: quit"
+	case ReviewView, TodayLogView, WeekLogView, MonthLogView:
+		help = "↑/↓: scroll • d: dashboard • t: today • 7: week • m: month • q: quit"
 	default:
-		help = "d: dashboard • a: add food • w: add water • g: set goal • t: today log • r: review • q: quit"
+		help = "d: dashboard • a: add food • w: add water • g: goal • t: today • 7: week • m: month • r: review • q: quit"
 	}
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render(help)
 }

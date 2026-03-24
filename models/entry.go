@@ -50,10 +50,16 @@ type FoodEntrySimple struct {
 	Fat         float64 `json:"fat"`
 }
 
+type WaterEntrySimple struct {
+	Date     string  `json:"date"`
+	AmountML float64 `json:"amount_ml"`
+}
+
 type ReviewData struct {
-	Goal    string            `json:"goal"`
-	Days    []DailyStats      `json:"days"`
-	Entries []FoodEntrySimple `json:"entries"`
+	Goal         string             `json:"goal"`
+	Days         []DailyStats       `json:"days"`
+	FoodEntries  []FoodEntrySimple  `json:"food_entries"`
+	WaterEntries []WaterEntrySimple `json:"water_entries"`
 }
 
 type ReviewResult struct {

@@ -18,6 +18,8 @@ const (
 	ReviewView
 	ConfirmFoodView
 	TodayLogView
+	WeekLogView
+	MonthLogView
 	EditFoodPreviewView
 	SetGoalView
 )
@@ -35,6 +37,9 @@ type Model struct {
 	Review      *models.ReviewResult
 	PendingFood *models.FoodPreview
 	TodayLog    []models.FoodEntry
+	WeekLog     []models.FoodEntry
+	MonthLog    []models.FoodEntry
+	RecentLog   []models.FoodEntry
 	GoalDescription string
 	Loading     bool
 	Error       error
