@@ -11,10 +11,9 @@ import (
 )
 
 func (m Model) View() string {
-	var s string
+	title := StyleTitle.Render("CALORIE TRACKER PRO")
 
-	s += StyleTitle.Render("CALORIE TRACKER PRO") + "\n\n"
-
+	var content string
 	if m.Loading {
 		msg := "⏳ Loading..."
 		switch m.Mode {
@@ -27,35 +26,37 @@ func (m Model) View() string {
 		case SetGoalView:
 			msg = "🎯 Setting your goal..."
 		}
-		s += msg + "\n"
+		content = msg
 	} else if m.Error != nil {
-		s += StyleError.Render(fmt.Sprintf("Error: %v", m.Error)) + "\n"
+		content = StyleError.Render(fmt.Sprintf("Error: %v", m.Error))
 	} else {
 		switch m.Mode {
 		case DashboardView:
-			s += m.dashboardView()
+			content = m.dashboardView()
 		case AddFoodView:
-			s += m.addFoodView()
+			content = m.addFoodView()
 		case AddWaterView:
-			s += m.addWaterView()
+			content = m.addWaterView()
 		case ReviewView:
-			s += m.reviewView()
+			content = m.reviewView()
 		case ConfirmFoodView:
-			s += m.confirmFoodView()
+			content = m.confirmFoodView()
 		case TodayLogView:
-			s += m.todayLogView()
+			content = m.todayLogView()
 		case WeekLogView:
-			s += m.weekLogView()
+			content = m.weekLogView()
 		case MonthLogView:
-			s += m.monthLogView()
+			content = m.monthLogView()
 		case EditFoodPreviewView:
-			s += m.editFoodPreviewView()
+			content = m.editFoodPreviewView()
 		case SetGoalView:
-			s += m.setGoalView()
+			content = m.setGoalView()
 		}
 	}
 
-	s += "\n" + m.helpView()
+	help := m.helpView()
+
+	s := lipgloss.JoinVertical(lipgloss.Center, title, "", content, "", help)
 	return lipgloss.Place(m.Width, m.Height, lipgloss.Center, lipgloss.Center, s)
 }
 
@@ -319,5 +320,8 @@ func (m Model) helpView() string {
 	default:
 		help = "d: dashboard • a: add food • w: add water • g: goal • t: today\n7: week • m: month • r: review • u: undo • q: quit"
 	}
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render(help)
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#777777")).
+		Align(lipgloss.Center).
+		Render(help)
 }
