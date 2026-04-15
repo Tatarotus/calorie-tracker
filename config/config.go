@@ -13,10 +13,10 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		SambaAPIKey:   getEnv("SAMBA_API_KEY", ""),
-		OpenAIBaseURL: getEnv("OPENAI_BASE_URL", "https://api.sambanova.ai/v1"),
-		FoodModel:     getEnv("OPENAI_MODEL", "Meta-Llama-3.1-8B-Instruct"),
-		ReviewModel:   getEnv("OPENAI_MODEL2", "DeepSeek-R1-0528"),
+		SambaAPIKey:   getEnv("NVIDIA_API_KEY", ""),
+		OpenAIBaseURL: getEnv("OPENAI_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+		FoodModel:     getEnv("OPENAI_MODEL", "meta/llama-3.1-70b-instruct"),
+		ReviewModel:   getEnv("OPENAI_MODEL2", "z-ai/glm4.7"),
 	}
 }
 
