@@ -115,6 +115,10 @@ func (s *TrackerService) GetGoal() (string, error) {
 	return goal.Description, nil
 }
 
+func (s *TrackerService) RemoveLastEntry() error {
+	return s.db.RemoveLastEntry()
+}
+
 func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 	goal, err := s.GetGoal()
 	if err != nil {

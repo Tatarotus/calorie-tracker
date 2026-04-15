@@ -317,7 +317,7 @@ func (m Model) helpView() string {
 	case ReviewView, TodayLogView, WeekLogView, MonthLogView:
 		help = "↑/↓: scroll • d: dashboard • t: today • 7: week • m: month • q: quit"
 	default:
-		help = "d: dashboard • a: add food • w: add water • g: goal • t: today • 7: week • m: month • r: review • q: quit"
+		help = "d: dashboard • a: add food • w: add water • g: goal • t: today • 7: week • m: month • r: review • u: undo • q: quit"
 	}
 	return lipgloss.NewStyle().Foreground(lipgloss.Color("#777777")).Render(help)
 }

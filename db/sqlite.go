@@ -374,6 +374,37 @@ func (db *DB) GetLatestGoal() (*models.Goal, error) {
 	return &g, nil
 }
 
+func (db *DB) RemoveLastEntry() error {
+	var entryType string
+	var id int64
+	var ts string
+
+	query := `
+		SELECT 'food' as type, id, timestamp FROM food_entries
+		UNION ALL
+		SELECT 'water' as type, id, timestamp FROM water_entries
+		ORDER BY timestamp DESC
+		LIMIT 1
+	`
+	err := db.conn.QueryRow(query).Scan(&entryType, &id, &ts)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	var deleteQuery string
+	if entryType == "food" {
+		deleteQuery = "DELETE FROM food_entries WHERE id = ?"
+	} else {
+		deleteQuery = "DELETE FROM water_entries WHERE id = ?"
+	}
+
+	_, err = db.conn.Exec(deleteQuery, id)
+	return err
+}
+
 
 func (db *DB) Close() error {
 	return db.conn.Close()

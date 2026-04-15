@@ -15,6 +15,7 @@ type (
 	FoodSavedMsg       struct{}
 	WaterMsg           struct{}
 	GoalSavedMsg       struct{}
+	UndoMsg            struct{}
 	GoalDescriptionMsg string
 	ReviewMsg          *models.ReviewResult
 	TodayLogMsg        []models.FoodEntry
@@ -177,6 +178,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.GoalInput.Focus()
 				m.GoalInput.SetValue("")
 				return m, nil
+			case "u":
+				m.Loading = true
+				return m, m.removeLastEntryCmd()
 			}
 		}
 
@@ -195,6 +199,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FoodSavedMsg:
 		m.Loading = false
 		m.Mode = DashboardView
+		return m, m.getStatsCmd()
+
+	case UndoMsg:
+		m.Loading = false
 		return m, m.getStatsCmd()
 
 	case GoalSavedMsg:
@@ -350,6 +358,16 @@ func (m Model) saveGoalCmd(desc string) tea.Cmd {
 			return ErrMsg(err)
 		}
 		return GoalSavedMsg{}
+	}
+}
+
+func (m Model) removeLastEntryCmd() tea.Cmd {
+	return func() tea.Msg {
+		err := m.Tracker.RemoveLastEntry()
+		if err != nil {
+			return ErrMsg(err)
+		}
+		return UndoMsg{}
 	}
 }
 
