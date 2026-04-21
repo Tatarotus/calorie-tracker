@@ -197,7 +197,7 @@ func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = EditFoodPreviewView
 		m.EditField = 0
 		m.setupEditInput()
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	}
@@ -214,10 +214,10 @@ func (m Model) handleEditPreviewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		m.Mode = ConfirmFoodView
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "esc":
 		m.Mode = ConfirmFoodView
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "ctrl+c":
 		return m, tea.Quit
 	}
@@ -235,12 +235,12 @@ func (m Model) handleDashboardKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = AddFoodView
 		m.FoodInput.Focus()
 		m.FoodInput.SetValue("")
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "w":
 		m.Mode = AddWaterView
 		m.WaterInput.Focus()
 		m.WaterInput.SetValue("")
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "r":
 		m.Mode = ReviewView
 		m.Loading = true
@@ -261,12 +261,18 @@ func (m Model) handleDashboardKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = SetGoalView
 		m.GoalInput.Focus()
 		m.GoalInput.SetValue("")
-		return m, tea.Batch()
+		return m, noOpCmd()
 	case "u":
 		m.Loading = true
 		return m, m.removeLastEntryCmd()
 	}
 	return m, nil
+}
+
+// noOpCmd returns a command that does nothing.
+// Used to signal that a key was handled but no action is needed.
+func noOpCmd() tea.Cmd {
+	return func() tea.Msg { return nil }
 }
 
 func (m Model) updateInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
