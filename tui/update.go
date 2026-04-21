@@ -34,7 +34,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
 	case tea.KeyMsg:
-		return m.handleKeyMsg(msg)
+		model, cmd := m.handleKeyMsg(msg)
+		if cmd != nil {
+			return model, cmd
+		}
+		m = model
 	case StatsMsg:
 		m.Stats = models.DailyStats(msg)
 		m.Loading = false
@@ -101,7 +105,7 @@ func (m Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (Model, tea.Cmd) {
 	if m.isLogOrReviewView() {
 		return m.handleLogViewKeys(msg)
 	}
@@ -123,7 +127,7 @@ func (m Model) isLogOrReviewView() bool {
 		m.Mode == WeekLogView || m.Mode == MonthLogView
 }
 
-func (m Model) handleLogViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleLogViewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -149,7 +153,7 @@ func (m Model) handleLogViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) handleInputModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleInputModeKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
@@ -162,7 +166,7 @@ func (m Model) handleInputModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleInputModeEnter() (tea.Model, tea.Cmd) {
+func (m Model) handleInputModeEnter() (Model, tea.Cmd) {
 	switch m.Mode {
 	case AddFoodView:
 		m.Loading = true
@@ -181,7 +185,7 @@ func (m Model) handleInputModeEnter() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "y":
 		m.Loading = true
@@ -200,7 +204,7 @@ func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleEditPreviewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleEditPreviewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
 		m.updatePendingFoodFromEdit()
@@ -220,7 +224,7 @@ func (m Model) handleEditPreviewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleDashboardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleDashboardKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
