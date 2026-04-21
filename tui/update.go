@@ -197,7 +197,7 @@ func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = EditFoodPreviewView
 		m.EditField = 0
 		m.setupEditInput()
-		return m, nil
+		return m, tea.Batch()
 	case "ctrl+c", "q":
 		return m, tea.Quit
 	}
@@ -214,10 +214,10 @@ func (m Model) handleEditPreviewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		m.Mode = ConfirmFoodView
-		return m, nil
+		return m, tea.Batch()
 	case "esc":
 		m.Mode = ConfirmFoodView
-		return m, nil
+		return m, tea.Batch()
 	case "ctrl+c":
 		return m, tea.Quit
 	}
@@ -235,12 +235,12 @@ func (m Model) handleDashboardKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = AddFoodView
 		m.FoodInput.Focus()
 		m.FoodInput.SetValue("")
-		return m, nil
+		return m, tea.Batch()
 	case "w":
 		m.Mode = AddWaterView
 		m.WaterInput.Focus()
 		m.WaterInput.SetValue("")
-		return m, nil
+		return m, tea.Batch()
 	case "r":
 		m.Mode = ReviewView
 		m.Loading = true
@@ -261,7 +261,7 @@ func (m Model) handleDashboardKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = SetGoalView
 		m.GoalInput.Focus()
 		m.GoalInput.SetValue("")
-		return m, nil
+		return m, tea.Batch()
 	case "u":
 		m.Loading = true
 		return m, m.removeLastEntryCmd()
