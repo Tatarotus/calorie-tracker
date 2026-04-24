@@ -8,12 +8,12 @@ import (
 )
 
 type TrackerService struct {
-	db      *db.DB
+	db      db.DBProvider
 	llm     *LLMService
 	matcher *FoodMatcher
 }
 
-func NewTrackerService(db *db.DB, llm *LLMService) *TrackerService {
+func NewTrackerService(db db.DBProvider, llm *LLMService) *TrackerService {
 	return &TrackerService{
 		db:      db,
 		llm:     llm,
@@ -24,15 +24,11 @@ func NewTrackerService(db *db.DB, llm *LLMService) *TrackerService {
 func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, error) {
 	matched, err := s.matcher.Match(description)
 	if err != nil {
-		// Log error but maybe continue to LLM? 
-		// Actually, if it's a DB error, we might want to know.
-		// For now, let's at least not ignore it if we want to debug.
 		return nil, fmt.Errorf("cache match error: %w", err)
 	}
 	if matched != nil {
 		return matched, nil
 	}
-
 	preview, err := s.llm.ParseFood(description)
 	if err != nil {
 		return nil, err
@@ -72,7 +68,6 @@ func (s *TrackerService) GetDailyStats(t time.Time) (models.DailyStats, error) {
 	if err != nil {
 		return models.DailyStats{}, err
 	}
-
 	stats := models.DailyStats{
 		Date: t.Format("2006-01-02"),
 	}
@@ -129,7 +124,7 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a map for easy lookup and ensure we have all 7 days (including today)
 	statsMap := make(map[string]models.DailyStats)
 	for _, st := range stats {
@@ -146,12 +141,11 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 			allDays = append(allDays, models.DailyStats{Date: dateStr})
 		}
 	}
-	
+
 	foodEntries, err := s.db.GetFoodEntriesRange(7)
 	if err != nil {
 		return nil, err
 	}
-	
 	simpleFoodEntries := make([]models.FoodEntrySimple, len(foodEntries))
 	for i, e := range foodEntries {
 		simpleFoodEntries[i] = models.FoodEntrySimple{
@@ -168,12 +162,11 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	
 	simpleWaterEntries := make([]models.WaterEntrySimple, len(waterEntries))
 	for i, e := range waterEntries {
 		simpleWaterEntries[i] = models.WaterEntrySimple{
-			Date:     e.Timestamp.Local().Format("2006-01-02"),
-			AmountML: e.AmountML,
+			Date:      e.Timestamp.Local().Format("2006-01-02"),
+			AmountML:  e.AmountML,
 		}
 	}
 
@@ -183,6 +176,6 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 		FoodEntries:  simpleFoodEntries,
 		WaterEntries: simpleWaterEntries,
 	}
-	
+
 	return s.llm.AnalyzeReview(data)
 }
