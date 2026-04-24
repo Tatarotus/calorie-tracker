@@ -1,10 +1,10 @@
 mode: set
-calorie-tracker/utils/time.go:5.37,7.2 1 1
-calorie-tracker/utils/time.go:9.44,11.2 1 1
 calorie-tracker/config/config.go:14.21,21.2 1 1
 calorie-tracker/config/config.go:23.42,24.40 1 1
 calorie-tracker/config/config.go:24.40,26.3 1 1
 calorie-tracker/config/config.go:27.2,27.17 1 1
+calorie-tracker/utils/time.go:5.37,7.2 1 1
+calorie-tracker/utils/time.go:9.44,11.2 1 1
 calorie-tracker/services/food_matcher.go:20.45,22.2 1 1
 calorie-tracker/services/food_matcher.go:35.54,39.2 3 1
 calorie-tracker/services/food_matcher.go:41.53,50.22 5 1
@@ -50,7 +50,7 @@ calorie-tracker/services/food_matcher.go:174.37,187.5 2 0
 calorie-tracker/services/food_matcher.go:190.4,190.36 1 0
 calorie-tracker/services/food_matcher.go:190.36,199.5 2 0
 calorie-tracker/services/food_matcher.go:203.2,203.17 1 0
-calorie-tracker/services/llm.go:20.52,22.2 1 0
+calorie-tracker/services/llm.go:20.52,22.2 1 1
 calorie-tracker/services/llm.go:42.81,60.25 4 0
 calorie-tracker/services/llm.go:60.25,62.17 2 0
 calorie-tracker/services/llm.go:62.17,63.9 1 0
@@ -60,7 +60,7 @@ calorie-tracker/services/llm.go:67.16,69.3 1 0
 calorie-tracker/services/llm.go:71.2,75.65 4 0
 calorie-tracker/services/llm.go:75.65,77.3 1 0
 calorie-tracker/services/llm.go:78.2,80.21 2 0
-calorie-tracker/services/llm.go:83.55,94.2 5 0
+calorie-tracker/services/llm.go:83.55,94.2 5 1
 calorie-tracker/services/llm.go:96.90,131.25 5 0
 calorie-tracker/services/llm.go:131.25,133.17 2 0
 calorie-tracker/services/llm.go:133.17,134.9 1 0
@@ -83,12 +83,12 @@ calorie-tracker/services/llm.go:186.56,188.3 1 0
 calorie-tracker/services/llm.go:190.2,190.32 1 0
 calorie-tracker/services/llm.go:190.32,192.3 1 0
 calorie-tracker/services/llm.go:194.2,194.49 1 0
-calorie-tracker/services/llm.go:197.57,199.61 1 0
-calorie-tracker/services/llm.go:199.61,201.51 2 0
-calorie-tracker/services/llm.go:201.51,203.4 1 0
-calorie-tracker/services/llm.go:207.2,209.45 3 0
-calorie-tracker/services/llm.go:209.45,211.3 1 0
-calorie-tracker/services/llm.go:212.2,212.31 1 0
+calorie-tracker/services/llm.go:197.57,199.61 1 1
+calorie-tracker/services/llm.go:199.61,201.51 2 1
+calorie-tracker/services/llm.go:201.51,203.4 1 1
+calorie-tracker/services/llm.go:207.2,209.45 3 1
+calorie-tracker/services/llm.go:209.45,211.3 1 1
+calorie-tracker/services/llm.go:212.2,212.31 1 1
 calorie-tracker/services/tracker.go:16.68,22.2 1 0
 calorie-tracker/services/tracker.go:24.85,26.16 2 0
 calorie-tracker/services/tracker.go:26.16,31.3 1 0

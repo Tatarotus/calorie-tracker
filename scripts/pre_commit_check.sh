@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-MIN_COVERAGE=4  # Initial target - incrementally increase as tests are added
+MIN_COVERAGE=6  # Incrementally increased from 4% - target: 80%
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
