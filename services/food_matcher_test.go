@@ -1,6 +1,8 @@
 package services
 
 import (
+	"calorie-tracker/db"
+	"calorie-tracker/models"
 	"testing"
 )
 
@@ -140,5 +142,76 @@ func TestFoodMatcherParse(t *testing.T) {
 	// Just verify it doesn't panic and returns a struct
 	if result.Amount != 0 || result.Unit != "" || result.Name != "" {
 		t.Logf("Parse returned: quantity=%v, unit=%s, name=%s", result.Amount, result.Unit, result.Name)
+	}
+}
+
+func TestFoodMatcher_Match_Cached(t *testing.T) {
+	mockDB := db.NewMockDB()
+	// Add a cached entry
+	mockDB.CacheFood(models.FoodEntry{
+		Description: "apple",
+		Calories:    95,
+		Protein:     0.5,
+		Carbs:       25,
+		Fat:         0.3,
+	})
+	
+	matcher := NewFoodMatcher(mockDB)
+	
+	result, err := matcher.Match("apple")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+	
+	if result.Calories != 95 {
+		t.Errorf("Expected Calories 95, got %f", result.Calories)
+	}
+}
+
+func TestFoodMatcher_Match_NotCached(t *testing.T) {
+	mockDB := db.NewMockDB()
+	matcher := NewFoodMatcher(mockDB)
+	
+	result, err := matcher.Match("unknown food xyz")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	if result != nil {
+		t.Error("Expected nil result for unknown food")
+	}
+}
+
+func TestFoodMatcher_Match_EmptyDescription(t *testing.T) {
+	mockDB := db.NewMockDB()
+	matcher := NewFoodMatcher(mockDB)
+	
+	result, err := matcher.Match("")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	if result != nil {
+		t.Error("Expected nil result for empty description")
+	}
+}
+
+func TestFoodMatcher_Match_WithError(t *testing.T) {
+	mockDB := db.NewMockDB()
+	mockDB.SetError("GetCachedFood", testError("db error"))
+	matcher := NewFoodMatcher(mockDB)
+	
+	result, err := matcher.Match("apple")
+	if err != nil {
+		t.Errorf("Expected no error (should continue to LLM), got %v", err)
+	}
+	
+	// Should return nil and continue to LLM
+	if result != nil {
+		t.Error("Expected nil result when cache fails")
 	}
 }
