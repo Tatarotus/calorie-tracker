@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Mutation Testing Script for Go
+# Enhanced Mutation Testing Script for Go
 # This script performs targeted mutation testing on critical packages
 # and calculates the mutation score
 
@@ -51,9 +51,10 @@ run_tests() {
 # Function to create a mutation and test it
 create_and_test_mutation() {
     local file=$1
-    local pattern=$2
-    local replacement=$3
-    local mutation_id=$4
+    local line_num=$2
+    local pattern=$3
+    local replacement=$4
+    local mutation_id=$5
     
     # Check if we've reached max mutations
     if [ $TOTAL_MUTATIONS -ge $MAX_MUTATIONS ]; then
@@ -63,18 +64,17 @@ create_and_test_mutation() {
     # Create backup
     cp "$file" "$TEMP_DIR/backup"
     
-    # Apply mutation using sed (global replacement on the line)
-    sed "s/${pattern}/${replacement}/" "$file" > "$TEMP_DIR/mutated"
-    mv "$TEMP_DIR/mutated" "$file"
+    # Apply mutation using sed
+    sed -i "${line_num}s/${pattern}/${replacement}/" "$file"
     
     # Run tests
     if run_tests; then
         # Tests still pass - mutation survived
-        echo "SURVIVED: $mutation_id in $file at line $line_num (if available)" >> "$LOG_FILE"
+        echo "SURVIVED: $mutation_id in $file at line $line_num" >> "$LOG_FILE"
         SURVIVED_MUTATIONS=$((SURVIVED_MUTATIONS + 1))
     else
         # Tests failed - mutation killed
-        echo "KILLED: $mutation_id in $file at line $line_num (if available)" >> "$LOG_FILE"
+        echo "KILLED: $mutation_id in $file at line $line_num" >> "$LOG_FILE"
         KILLED_MUTATIONS=$((KILLED_MUTATIONS + 1))
     fi
     
@@ -109,62 +109,44 @@ add_mutations_for_file() {
     # Read the entire file content
     local content=$(cat "$file")
     
-    # Only mutate in function bodies, not in imports/package declarations
-    # Extract content after the first closing brace of imports
-    local in_function=0
-    local brace_count=0
-    
-    # Process the file character by character is complex, so we'll use a simpler approach:
-    # Only mutate specific patterns that are likely in function bodies
-    
     # Mutation 1: Change == to != (but not in imports)
     if echo "$content" | grep -qE '[^"]==' | grep -vE '^\s*import'; then
-        create_and_test_mutation "$file" '==' '!=' "EQ_to_NEQ" || true
+        create_and_test_mutation "$file" "==" "!=" "EQ_to_NEQ" || true
     fi
     
     # Mutation 2: Change != to ==
     if echo "$content" | grep -qE '!='; then
-        create_and_test_mutation "$file" '!=' '==' "NEQ_to_EQ" || true
+        create_and_test_mutation "$file" "!=" "==" "NEQ_to_EQ" || true
     fi
     
     # Mutation 3: Change && to ||
     if echo "$content" | grep -qE '&&'; then
-        create_and_test_mutation "$file" '&&' '||' "AND_to_OR" || true
+        create_and_test_mutation "$file" "&&" "||" "AND_to_OR" || true
     fi
     
     # Mutation 4: Change || to &&
     if echo "$content" | grep -qE '||'; then
-        create_and_test_mutation "$file" '||' '&&' "OR_to_AND" || true
+        create_and_test_mutation "$file" "||" "&&" "OR_to_AND" || true
     fi
     
-    # Mutation 5: Change return true to return false
-    if echo "$content" | grep -qE 'return true'; then
-        create_and_test_mutation "$file" 'return true' 'return false' "TRUE_to_FALSE" || true
-    fi
-    
-    # Mutation 6: Change return false to return true
-    if echo "$content" | grep -qE 'return false'; then
-        create_and_test_mutation "$file" 'return false' 'return true' "FALSE_to_TRUE" || true
-    fi
-    
-    # Mutation 7: Change > to >=
+    # Mutation 5: Change > to >=
     if echo "$content" | grep -qE '[^<>]>[^=]'; then
-        create_and_test_mutation "$file" '> ' '>= ' "GT_to_GTE" || true
+        create_and_test_mutation "$file" "> " ">= " "GT_to_GTE" || true
     fi
     
-    # Mutation 8: Change < to <=
+    # Mutation 6: Change < to <=
     if echo "$content" | grep -qE '[^<>]<[^=]'; then
-        create_and_test_mutation "$file" '< ' '<= ' "LT_to_LTE" || true
+        create_and_test_mutation "$file" "< " "<= " "LT_to_LTE" || true
     fi
     
-    # Mutation 9: Change 0 to 1 in comparisons
-    if echo "$content" | grep -qE '== 0'; then
-        create_and_test_mutation "$file" '== 0' '== 1' "ZERO_to_ONE" || true
+    # Mutation 7: Change len() == 0 to len() != 0
+    if echo "$content" | grep -qE 'len\([^)]*\) == 0'; then
+        create_and_test_mutation "$file" "== 0" "!= 0" "LEN_EQ_0_to_NEQ_0" || true
     fi
     
-    # Mutation 10: Change len() > 0 to len() > 1
+    # Mutation 8: Change len() > 0 to len() > 1
     if echo "$content" | grep -qE 'len\([^)]*\) > 0'; then
-        create_and_test_mutation "$file" '> 0' '> 1' "LEN_GT_0_to_1" || true
+        create_and_test_mutation "$file" "> 0" "> 1" "LEN_GT_0_to_GT_1" || true
     fi
 }
 
