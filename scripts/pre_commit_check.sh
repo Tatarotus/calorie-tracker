@@ -112,7 +112,40 @@ echo "=========================================="
 echo "✔ Tests passed"
 echo "✔ Coverage OK (>= ${MIN_COVERAGE}%)"
 echo "✔ CCN OK"
+echo "✔ Mutation OK"
 echo "✔ Commit allowed"
 echo ""
 
+
+# -----------------------------------------------------------------------------
+# 4. Mutation Testing Check
+# -----------------------------------------------------------------------------
+echo "🧬 Running mutation testing..."
+# Run the mutation testing script
+if ! bash "$PROJECT_ROOT/scripts/check_mutation.sh"; then
+    echo -e "${RED}✗ FAILED: Mutation testing failed${NC}"
+    FAILED=1
+else
+    echo -e "${GREEN}✔ Mutation OK${NC}"
+fi
+echo ""
+
+# Exit immediately if mutation check failed
+if [ "$FAILED" -eq 1 ]; then
+    echo -e "${RED}Commit blocked: Mutation score requirement not met${NC}"
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# All Checks Passed
+# -----------------------------------------------------------------------------
+echo "=========================================="
+echo -e "${GREEN} All Quality Checks Passed!${NC}"
+echo "=========================================="
+echo "✔ Tests passed"
+echo "✔ Coverage OK (>= ${MIN_COVERAGE}%)"
+echo "✔ CCN OK"
+echo "✔ Mutation OK"
+echo "✔ Commit allowed"
+echo ""
 exit 0
