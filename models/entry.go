@@ -54,10 +54,14 @@ type ReferenceFood struct {
 	Name         string  `json:"name"`
 	BaseQuantity float64 `json:"base_quantity"`
 	Unit         string  `json:"unit"`
-	Calories     float64 `json:"calories"`
-	Protein      float64 `json:"protein"`
-	Carbs        float64 `json:"carbs"`
-	Fat          float64 `json:"fat"`
+	Macros       Macros  `json:"macros"`
+}
+
+type Macros struct {
+	Calories float64 `json:"calories"`
+	Protein  float64 `json:"protein"`
+	Carbs    float64 `json:"carbs"`
+	Fat      float64 `json:"fat"`
 }
 
 type WaterEntrySimple struct {

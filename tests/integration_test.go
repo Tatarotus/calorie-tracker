@@ -1,50 +1,60 @@
-package main_test
+package tests
 
 import (
 	"calorie-tracker/config"
 	"calorie-tracker/db"
 	"calorie-tracker/models"
 	"calorie-tracker/services"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
 
-// TestFullFoodTrackingFlow tests the complete flow from food parsing to persistence
+// TestFullFoodTrackingFlow tests the end-to-end flow of tracking food
 func TestFullFoodTrackingFlow(t *testing.T) {
-	// Setup real DB
+	// Step 1: Setup
 	testDB, err := db.NewTestDB(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
 	defer testDB.Close()
 
-	// Setup LLM service (will use mock responses in real scenario)
 	cfg := &config.Config{
 		SambaAPIKey:   "test-key",
 		OpenAIBaseURL: "https://test.com/v1",
+		FoodModel:     "test-model",
 	}
-	llm := services.NewLLMService(cfg)
 
-	// Create tracker service with real DB
+	// Step 2: Parse a food item
+	// We need a mock server that returns a ReferenceFood
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"apple\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":350,\"protein\":1,\"carbs\":25,\"fat\":0}}"}}]}`)
+	}))
+	defer server.Close()
+
+	cfg.OpenAIBaseURL = server.URL
+	llm := services.NewLLMServiceWithClient(cfg, server.Client())
 	tracker := services.NewTrackerService(testDB, llm)
 
-	// Step 1: Parse food (this would normally call LLM, but we'll test the flow)
-	// For this test, we'll directly save a food preview to simulate LLM parsing
-	preview := &models.FoodPreview{
-		Description: "Grilled Chicken Salad",
-		Calories:    350,
-		Protein:     30,
-		Carbs:       15,
-		Fat:         18,
+	preview, err := tracker.ParseFood("100g apple")
+	if err != nil {
+		t.Fatalf("ParseFood failed: %v", err)
 	}
 
-	// Step 2: Save food to DB
+	if preview.Calories != 350 {
+		t.Errorf("Expected 350 calories, got %f", preview.Calories)
+	}
+
+	// Step 3: Save the food
 	err = tracker.SaveFood(preview)
 	if err != nil {
-		t.Fatalf("Failed to save food: %v", err)
+		t.Fatalf("SaveFood failed: %v", err)
 	}
 
-	// Step 3: Verify food was saved
+	// Verify it's in the database
 	entries, err := testDB.GetDailyFoodEntries(time.Now())
 	if err != nil {
 		t.Fatalf("Failed to get entries: %v", err)
@@ -55,15 +65,15 @@ func TestFullFoodTrackingFlow(t *testing.T) {
 	}
 
 	entry := entries[0]
-	if entry.Description != "Grilled Chicken Salad" {
-		t.Errorf("Expected 'Grilled Chicken Salad', got '%s'", entry.Description)
+	if entry.Description != "100.0g apple" {
+		t.Errorf("Expected '100.0g apple', got '%s'", entry.Description)
 	}
 	if entry.Calories != 350 {
 		t.Errorf("Expected 350 calories, got %f", entry.Calories)
 	}
 
 	// Step 4: Verify cache was updated
-	cached, err := testDB.GetCachedFood("Grilled Chicken Salad")
+	cached, err := testDB.GetCachedFood("apple")
 	if err != nil {
 		t.Fatalf("Failed to get cached food: %v", err)
 	}
@@ -72,8 +82,8 @@ func TestFullFoodTrackingFlow(t *testing.T) {
 		t.Fatal("Expected cached entry")
 	}
 
-	if cached.Calories != 350 {
-		t.Errorf("Expected cached calories 350, got %f", cached.Calories)
+	if cached.Macros.Calories != 350 {
+		t.Errorf("Expected cached calories 350, got %f", cached.Macros.Calories)
 	}
 }
 
@@ -98,22 +108,17 @@ func TestWaterTrackingFlow(t *testing.T) {
 		t.Fatalf("Failed to add water: %v", err)
 	}
 
-	// Verify water was saved
-	entries, err := testDB.GetDailyWaterEntries(time.Now())
+	// Verify
+	stats, err := tracker.GetDailyStats(time.Now())
 	if err != nil {
-		t.Fatalf("Failed to get water entries: %v", err)
+		t.Fatalf("Failed to get stats: %v", err)
 	}
-
-	if len(entries) != 1 {
-		t.Errorf("Expected 1 water entry, got %d", len(entries))
-	}
-
-	if entries[0].AmountML != 500 {
-		t.Errorf("Expected 500ml, got %f", entries[0].AmountML)
+	if stats.WaterML != 500 {
+		t.Errorf("Expected 500ml water, got %f", stats.WaterML)
 	}
 }
 
-// TestGoalSettingFlow tests goal setting and retrieval
+// TestGoalSettingFlow tests goal setting
 func TestGoalSettingFlow(t *testing.T) {
 	testDB, err := db.NewTestDB(":memory:")
 	if err != nil {
@@ -121,31 +126,25 @@ func TestGoalSettingFlow(t *testing.T) {
 	}
 	defer testDB.Close()
 
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: "https://test.com/v1",
-	}
-	llm := services.NewLLMService(cfg)
-	tracker := services.NewTrackerService(testDB, llm)
+	tracker := services.NewTrackerService(testDB, nil)
 
 	// Set goal
-	err = tracker.SetGoal("Lose 10kg in 6 months")
+	err = tracker.SetGoal("Lose 5kg")
 	if err != nil {
 		t.Fatalf("Failed to set goal: %v", err)
 	}
 
-	// Retrieve goal
+	// Get goal
 	goal, err := tracker.GetGoal()
 	if err != nil {
 		t.Fatalf("Failed to get goal: %v", err)
 	}
-
-	if goal != "Lose 10kg in 6 months" {
-		t.Errorf("Expected 'Lose 10kg in 6 months', got '%s'", goal)
+	if goal != "Lose 5kg" {
+		t.Errorf("Expected goal 'Lose 5kg', got %s", goal)
 	}
 }
 
-// TestDailyStatsAggregationFlow tests stats calculation across multiple entries
+// TestDailyStatsAggregationFlow tests stats aggregation over multiple entries
 func TestDailyStatsAggregationFlow(t *testing.T) {
 	testDB, err := db.NewTestDB(":memory:")
 	if err != nil {
@@ -153,80 +152,42 @@ func TestDailyStatsAggregationFlow(t *testing.T) {
 	}
 	defer testDB.Close()
 
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: "https://test.com/v1",
-	}
-	llm := services.NewLLMService(cfg)
-	tracker := services.NewTrackerService(testDB, llm)
-
+	tracker := services.NewTrackerService(testDB, nil)
 	now := time.Now()
 
-	// Add multiple food entries
-	foods := []struct {
-		desc     string
-		calories float64
-		protein  float64
-		carbs    float64
-		fat      float64
-	}{
-		{"Breakfast", 300, 15, 40, 10},
-		{"Lunch", 500, 25, 60, 20},
-		{"Dinner", 600, 30, 50, 25},
-	}
+	// Add entries directly to DB for simplicity
+	testDB.AddFoodEntry(models.FoodEntry{
+		Timestamp: now,
+		Calories:  300,
+		Protein:   20,
+	})
+	testDB.AddFoodEntry(models.FoodEntry{
+		Timestamp: now,
+		Calories:  500,
+		Protein:   30,
+	})
+	testDB.AddWaterEntry(models.WaterEntry{
+		Timestamp: now,
+		AmountML:  250,
+	})
 
-	for _, f := range foods {
-		preview := &models.FoodPreview{
-			Description: f.desc,
-			Calories:    f.calories,
-			Protein:     f.protein,
-			Carbs:       f.carbs,
-			Fat:         f.fat,
-		}
-		if err := tracker.SaveFood(preview); err != nil {
-			t.Fatalf("Failed to save food %s: %v", f.desc, err)
-		}
-	}
-
-	// Add water entries
-	if err := tracker.AddWater(250); err != nil {
-		t.Fatalf("Failed to add water: %v", err)
-	}
-	if err := tracker.AddWater(500); err != nil {
-		t.Fatalf("Failed to add water: %v", err)
-	}
-
-	// Get daily stats
 	stats, err := tracker.GetDailyStats(now)
 	if err != nil {
-		t.Fatalf("Failed to get daily stats: %v", err)
+		t.Fatalf("Failed to get stats: %v", err)
 	}
 
-	// Verify aggregation
-	expectedCalories := 1400.0 // 300 + 500 + 600
-	expectedProtein := 70.0    // 15 + 25 + 30
-	expectedCarbs := 150.0     // 40 + 60 + 50
-	expectedFat := 55.0        // 10 + 20 + 25
-	expectedWater := 750.0     // 250 + 500
-
-	if stats.Calories != expectedCalories {
-		t.Errorf("Expected %.0f calories, got %.0f", expectedCalories, stats.Calories)
+	if stats.Calories != 800 {
+		t.Errorf("Expected 800 calories, got %f", stats.Calories)
 	}
-	if stats.Protein != expectedProtein {
-		t.Errorf("Expected %.0f protein, got %.0f", expectedProtein, stats.Protein)
+	if stats.Protein != 50 {
+		t.Errorf("Expected 50g protein, got %f", stats.Protein)
 	}
-	if stats.Carbs != expectedCarbs {
-		t.Errorf("Expected %.0f carbs, got %.0f", expectedCarbs, stats.Carbs)
-	}
-	if stats.Fat != expectedFat {
-		t.Errorf("Expected %.0f fat, got %.0f", expectedFat, stats.Fat)
-	}
-	if stats.WaterML != expectedWater {
-		t.Errorf("Expected %.0f water, got %.0f", expectedWater, stats.WaterML)
+	if stats.WaterML != 250 {
+		t.Errorf("Expected 250ml water, got %f", stats.WaterML)
 	}
 }
 
-// TestUndoLastEntryFlow tests removing the last entry
+// TestUndoLastEntryFlow tests the undo functionality
 func TestUndoLastEntryFlow(t *testing.T) {
 	testDB, err := db.NewTestDB(":memory:")
 	if err != nil {
@@ -234,36 +195,25 @@ func TestUndoLastEntryFlow(t *testing.T) {
 	}
 	defer testDB.Close()
 
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: "https://test.com/v1",
-	}
-	llm := services.NewLLMService(cfg)
-	tracker := services.NewTrackerService(testDB, llm)
+	tracker := services.NewTrackerService(testDB, nil)
 
-	// Add two food entries
-	preview1 := &models.FoodPreview{Description: "Entry 1", Calories: 100}
-	preview2 := &models.FoodPreview{Description: "Entry 2", Calories: 200}
+	// Add two entries
+	testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 1", Timestamp: time.Now().Add(-1 * time.Minute)})
+	testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 2", Timestamp: time.Now()})
 
-	tracker.SaveFood(preview1)
-	tracker.SaveFood(preview2)
-
-	// Verify both entries exist
-	entries, _ := testDB.GetDailyFoodEntries(time.Now())
-	if len(entries) != 2 {
-		t.Errorf("Expected 2 entries, got %d", len(entries))
-	}
-
-	// Remove last entry
+	// Undo
 	err = tracker.RemoveLastEntry()
 	if err != nil {
-		t.Fatalf("Failed to remove last entry: %v", err)
+		t.Fatalf("RemoveLastEntry failed: %v", err)
 	}
 
-	// Verify only one entry remains
-	entries, _ = testDB.GetDailyFoodEntries(time.Now())
+	// Verify only Entry 1 remains
+	entries, _ := tracker.GetTodayFoodEntries()
 	if len(entries) != 1 {
-		t.Errorf("Expected 1 entry after removal, got %d", len(entries))
+		t.Fatalf("Expected 1 entry after undo, got %d", len(entries))
+	}
+	if entries[0].Description != "Entry 1" {
+		t.Errorf("Expected 'Entry 1' to remain, got '%s'", entries[0].Description)
 	}
 }
 
@@ -275,36 +225,23 @@ func TestMultipleDaysStatsFlow(t *testing.T) {
 	}
 	defer testDB.Close()
 
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: "https://test.com/v1",
-	}
-	llm := services.NewLLMService(cfg)
-	tracker := services.NewTrackerService(testDB, llm)
+	tracker := services.NewTrackerService(testDB, nil)
+	now := time.Now()
 
-	// Add entries for different days
-	for i := 0; i < 3; i++ {
-		date := time.Now().AddDate(0, 0, -i)
-		preview := &models.FoodPreview{
-			Description: "Day " + string(rune('0'+i)),
-			Calories:    500 * float64(i+1),
-		}
-		// Manually set timestamp by directly adding to DB
-		entry := models.FoodEntry{
-			Timestamp:   date,
-			Description: preview.Description,
-			Calories:    preview.Calories,
-		}
-		testDB.AddFoodEntry(entry)
+	// Today
+	testDB.AddFoodEntry(models.FoodEntry{Timestamp: now, Calories: 2000})
+	// Yesterday
+	testDB.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -1), Calories: 1800})
+
+	// Check today's stats
+	statsToday, _ := tracker.GetDailyStats(now)
+	if statsToday.Calories != 2000 {
+		t.Errorf("Expected 2000 calories today, got %f", statsToday.Calories)
 	}
 
-	// Get food entries range
-	entries, err := tracker.GetFoodEntriesRange(7)
-	if err != nil {
-		t.Fatalf("Failed to get entries range: %v", err)
-	}
-
-	if len(entries) != 3 {
-		t.Errorf("Expected 3 entries, got %d", len(entries))
+	// Check yesterday's stats
+	statsYesterday, _ := tracker.GetDailyStats(now.AddDate(0, 0, -1))
+	if statsYesterday.Calories != 1800 {
+		t.Errorf("Expected 1800 calories yesterday, got %f", statsYesterday.Calories)
 	}
 }

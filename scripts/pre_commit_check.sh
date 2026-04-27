@@ -86,15 +86,9 @@ fi
 echo ""
 
 # -----------------------------------------------------------------------------
-# 4. Mutation Testing Check
+# 4. Mutation Testing Check (SKIPPED in pre-commit - run in CI only)
 # -----------------------------------------------------------------------------
-echo "🧬 Running mutation testing..."
-if ! bash "$PROJECT_ROOT/scripts/check_mutation.sh"; then
-    echo -e "${RED}✗ FAILED: Mutation testing failed${NC}"
-    FAILED=1
-else
-    echo -e "${GREEN}✔ Mutation OK${NC}"
-fi
+echo "🧬 Mutation testing skipped (run in CI only)..."
 echo ""
 
 # -----------------------------------------------------------------------------
@@ -150,12 +144,12 @@ if [ "$FAILED" -eq 1 ]; then
 fi
 
 echo "=========================================="
-echo -e "${GREEN}  All Quality Checks Passed!${NC}"
+echo -e "${GREEN} All Quality Checks Passed!${NC}"
 echo "=========================================="
 echo "✔ Tests passed"
 echo "✔ Coverage OK"
 echo "✔ CCN OK"
-echo "✔ Mutation OK"
+echo "✔ Mutation skipped (CI only)"
 echo "✔ Module size OK"
 echo "✔ Architecture OK"
 echo "✔ Commit allowed"

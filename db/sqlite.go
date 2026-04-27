@@ -60,6 +60,8 @@ func (db *DB) migrate() error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS food_cache (
 			description TEXT PRIMARY KEY,
+			base_quantity REAL,
+			unit TEXT,
 			calories REAL,
 			protein REAL,
 			carbs REAL,
@@ -92,16 +94,16 @@ func (db *DB) migrate() error {
 
 func (db *DB) seedReferenceFoods() error {
 	foods := []models.ReferenceFood{
-		{Name: "arroz branco", BaseQuantity: 100, Unit: "gram", Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3},
-		{Name: "frango grelhado", BaseQuantity: 100, Unit: "gram", Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6},
-		{Name: "ovo", BaseQuantity: 1, Unit: "unit", Calories: 70, Protein: 6, Carbs: 0.6, Fat: 5},
-		{Name: "banana", BaseQuantity: 1, Unit: "unit", Calories: 89, Protein: 1.1, Carbs: 23, Fat: 0.3},
+		{Name: "arroz branco", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3}},
+		{Name: "frango grelhado", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6}},
+		{Name: "ovo", BaseQuantity: 1, Unit: "unit", Macros: models.Macros{Calories: 70, Protein: 6, Carbs: 0.6, Fat: 5}},
+		{Name: "banana", BaseQuantity: 1, Unit: "unit", Macros: models.Macros{Calories: 89, Protein: 1.1, Carbs: 23, Fat: 0.3}},
 	}
 
 	for _, f := range foods {
 		_, err := db.conn.Exec(
 			"INSERT OR IGNORE INTO reference_foods (name, base_quantity, unit, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			f.Name, f.BaseQuantity, f.Unit, f.Calories, f.Protein, f.Carbs, f.Fat,
+			f.Name, f.BaseQuantity, f.Unit, f.Macros.Calories, f.Macros.Protein, f.Macros.Carbs, f.Macros.Fat,
 		)
 		if err != nil {
 			return err
@@ -333,13 +335,13 @@ func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
 	return entries, nil
 }
 
-func (db *DB) GetCachedFood(description string) (*models.FoodEntry, error) {
+func (db *DB) GetCachedFood(description string) (*models.ReferenceFood, error) {
 	description = strings.ToLower(strings.TrimSpace(description))
-	var e models.FoodEntry
+	var f models.ReferenceFood
 	err := db.conn.QueryRow(
-		"SELECT calories, protein, carbs, fat FROM food_cache WHERE description = ?",
+		"SELECT base_quantity, unit, calories, protein, carbs, fat FROM food_cache WHERE description = ?",
 		description,
-	).Scan(&e.Calories, &e.Protein, &e.Carbs, &e.Fat)
+	).Scan(&f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -347,8 +349,8 @@ func (db *DB) GetCachedFood(description string) (*models.FoodEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.Description = description
-	return &e, nil
+	f.Name = description
+	return &f, nil
 }
 
 func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
@@ -357,7 +359,7 @@ func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
 	err := db.conn.QueryRow(
 		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ? OR ? LIKE '%' || name || '%'",
 		name, name,
-	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Calories, &f.Protein, &f.Carbs, &f.Fat)
+	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -368,29 +370,29 @@ func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
 	return &f, nil
 }
 
-func (db *DB) CacheFood(entry models.FoodEntry) error {
-	description := strings.ToLower(strings.TrimSpace(entry.Description))
+func (db *DB) CacheFood(f models.ReferenceFood) error {
+	description := strings.ToLower(strings.TrimSpace(f.Name))
 	_, err := db.conn.Exec(
-		"INSERT OR REPLACE INTO food_cache (description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?)",
-		description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
+		"INSERT OR REPLACE INTO food_cache (description, base_quantity, unit, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		description, f.BaseQuantity, f.Unit, f.Macros.Calories, f.Macros.Protein, f.Macros.Carbs, f.Macros.Fat,
 	)
 	return err
 }
 
-func (db *DB) GetAllCacheEntries() ([]models.FoodEntry, error) {
-	rows, err := db.conn.Query("SELECT description, calories, protein, carbs, fat FROM food_cache")
+func (db *DB) GetAllCacheEntries() ([]models.ReferenceFood, error) {
+	rows, err := db.conn.Query("SELECT description, base_quantity, unit, calories, protein, carbs, fat FROM food_cache")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var entries []models.FoodEntry
+	var entries []models.ReferenceFood
 	for rows.Next() {
-		var e models.FoodEntry
-		if err := rows.Scan(&e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+		var f models.ReferenceFood
+		if err := rows.Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat); err != nil {
 			return nil, err
 		}
-		entries = append(entries, e)
+		entries = append(entries, f)
 	}
 	return entries, nil
 }

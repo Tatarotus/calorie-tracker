@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -92,10 +91,9 @@ func MockHTTPServerError(statusCode int) *httptest.Server {
 	}))
 }
 
-// MockFoodPreviewResponse returns a valid JSON response for food parsing
-// The return value is the JSON object as a string (what the LLM would return)
-func MockFoodPreviewResponse(desc string, calories, protein, carbs, fat float64) string {
-	return fmt.Sprintf(`{"calories": %.2f, "protein": %.2f, "carbs": %.2f, "fat": %.2f}`, calories, protein, carbs, fat)
+// MockFoodPreviewResponse returns a valid JSON response for food parsing using ReferenceFood structure
+func MockFoodPreviewResponse(name string, calories, protein, carbs, fat float64) string {
+	return fmt.Sprintf(`{"name": "%s", "base_quantity": 100, "unit": "g", "macros": {"calories": %.2f, "protein": %.2f, "carbs": %.2f, "fat": %.2f}}`, name, calories, protein, carbs, fat)
 }
 
 // MockReviewResult returns a valid JSON response for review analysis (properly escaped for embedding)
@@ -106,13 +104,6 @@ func MockReviewResultResponse() string {
 // MockHTTPServerWithJSON creates a test server that returns parsed JSON
 func MockHTTPServerWithJSON(model, jsonContent string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Parse the request to verify it's correct
-		var req chatRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 

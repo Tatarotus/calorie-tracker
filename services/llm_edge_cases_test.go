@@ -73,7 +73,7 @@ func TestLLMService_ParseFood_RetrySuccess(t *testing.T) {
 			}{
 				{Message: struct {
 					Content string `json:"content"`
-				}{Content: `{"calories": 100, "protein": 1, "carbs": 25, "fat": 0}`}},
+				}{Content: `{"name": "test", "base_quantity": 100, "unit": "g", "macros": {"calories": 100, "protein": 1, "carbs": 25, "fat": 0}}`}},
 			},
 		}
 		json.NewEncoder(w).Encode(resp)
@@ -94,8 +94,8 @@ func TestLLMService_ParseFood_RetrySuccess(t *testing.T) {
 	if attempts != 2 {
 		t.Errorf("Expected 2 attempts, got %d", attempts)
 	}
-	if preview.Calories != 100 {
-		t.Errorf("Expected 100 calories, got %f", preview.Calories)
+	if preview.Macros.Calories != 100 {
+		t.Errorf("Expected 100 calories, got %f", preview.Macros.Calories)
 	}
 }
 

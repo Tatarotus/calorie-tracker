@@ -141,15 +141,19 @@ func TestSQLite_CacheFood(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
-	entry := models.FoodEntry{
-		Description: "Cached Apple",
-		Calories:    100,
-		Protein:     1,
-		Carbs:       20,
-		Fat:         1,
+	ref := models.ReferenceFood{
+		Name:         "Cached Apple",
+		BaseQuantity: 100,
+		Unit:         "gram",
+		Macros: models.Macros{
+			Calories: 100,
+			Protein:  1,
+			Carbs:    20,
+			Fat:      1,
+		},
 	}
 
-	err := db.CacheFood(entry)
+	err := db.CacheFood(ref)
 	if err != nil {
 		t.Fatalf("Failed to cache food: %v", err)
 	}
@@ -163,8 +167,8 @@ func TestSQLite_CacheFood(t *testing.T) {
 		t.Fatal("Expected cached entry, got nil")
 	}
 
-	if cached.Calories != 100 {
-		t.Errorf("Expected 100 calories, got %f", cached.Calories)
+	if cached.Macros.Calories != 100 {
+		t.Errorf("Expected 100 calories, got %f", cached.Macros.Calories)
 	}
 }
 
@@ -173,12 +177,16 @@ func TestSQLite_CacheFood_SpecialCharacters(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
-	entry := models.FoodEntry{
-		Description: "Café au lait",
-		Calories:    150,
+	ref := models.ReferenceFood{
+		Name:         "Café au lait",
+		BaseQuantity: 200,
+		Unit:         "ml",
+		Macros: models.Macros{
+			Calories: 150,
+		},
 	}
 
-	err := db.CacheFood(entry)
+	err := db.CacheFood(ref)
 	if err != nil {
 		t.Fatalf("Failed to cache food with special chars: %v", err)
 	}
@@ -221,24 +229,32 @@ func TestSQLite_CacheFood_Duplicate(t *testing.T) {
 	db := setupTestDB(t)
 	defer cleanupTestDB(t, db)
 
-	entry1 := models.FoodEntry{
-		Description: "Apple",
-		Calories:    100,
+	ref1 := models.ReferenceFood{
+		Name:         "Apple",
+		BaseQuantity: 100,
+		Unit:         "gram",
+		Macros: models.Macros{
+			Calories: 100,
+		},
 	}
-	db.CacheFood(entry1)
+	db.CacheFood(ref1)
 
-	entry2 := models.FoodEntry{
-		Description: "Apple",
-		Calories:    150,
+	ref2 := models.ReferenceFood{
+		Name:         "Apple",
+		BaseQuantity: 100,
+		Unit:         "gram",
+		Macros: models.Macros{
+			Calories: 150,
+		},
 	}
-	err := db.CacheFood(entry2)
+	err := db.CacheFood(ref2)
 	if err != nil {
 		t.Fatalf("Failed to cache duplicate: %v", err)
 	}
 
 	cached, _ := db.GetCachedFood("Apple")
-	if cached.Calories != 150 {
-		t.Errorf("Expected 150 calories (updated), got %f", cached.Calories)
+	if cached.Macros.Calories != 150 {
+		t.Errorf("Expected 150 calories (updated), got %f", cached.Macros.Calories)
 	}
 }
 

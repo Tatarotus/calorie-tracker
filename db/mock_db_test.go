@@ -128,9 +128,16 @@ func TestMockDB_GetFoodEntriesRange(t *testing.T) {
 
 func TestMockDB_CacheFood(t *testing.T) {
 	db := NewMockDB()
-	entry := models.FoodEntry{Description: "Apple", Calories: 95}
+	ref := models.ReferenceFood{
+		Name:         "Apple",
+		BaseQuantity: 100,
+		Unit:         "gram",
+		Macros: models.Macros{
+			Calories: 95,
+		},
+	}
 
-	err := db.CacheFood(entry)
+	err := db.CacheFood(ref)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -139,8 +146,8 @@ func TestMockDB_CacheFood(t *testing.T) {
 	if cached == nil {
 		t.Fatal("Expected cached entry")
 	}
-	if cached.Calories != 95 {
-		t.Errorf("Expected Calories 95, got %f", cached.Calories)
+	if cached.Macros.Calories != 95 {
+		t.Errorf("Expected Calories 95, got %f", cached.Macros.Calories)
 	}
 }
 

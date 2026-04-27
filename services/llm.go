@@ -41,9 +41,30 @@ func (s *LLMService) Call(model, prompt string) (string, error) {
 	return s.callLLM(model, prompt)
 }
 
-// ParseFood implements FoodParser interface
-func (s *LLMService) ParseFood(description string) (*models.FoodPreview, error) {
-	prompt := fmt.Sprintf(`You are a nutrition expert. Analyze the following food description and return a JSON block with nutritional estimates for the given portion. { "calories": number, "protein": number, "carbs": number, "fat": number } Food: "%s" Rules: 1. Return ONLY the JSON block, no other text. 2. Use numbers ONLY for all fields. 3. DO NOT include units (like "g", "kcal", etc.) in the JSON values. 4. Estimate accurately for traditional and regional dishes.`, description)
+// ParseFood analyzes food description and returns deterministic reference data
+func (s *LLMService) ParseFood(description string) (*models.ReferenceFood, error) {
+	prompt := fmt.Sprintf(`Analyze the following food description and return nutritional information.
+Description: %s
+
+You MUST return a STRICT JSON object with this exact structure:
+{
+  "name": "standardized food name",
+  "base_quantity": 100,
+  "unit": "g",
+  "macros": {
+    "calories": number,
+    "protein": number,
+    "carbs": number,
+    "fat": number
+  }
+}
+
+Rules:
+1. "base_quantity" should usually be 100 for grams/ml or 1 for units.
+2. "unit" should be "g", "ml", or "unit".
+3. "macros" are for the "base_quantity".
+4. If multiple items are mentioned, return values for the main item.
+5. NO prose, NO markdown blocks, only the raw JSON.`, description)
 
 	var content string
 	var err error
@@ -62,12 +83,11 @@ func (s *LLMService) ParseFood(description string) (*models.FoodPreview, error) 
 	jsonStr := s.extractJSON(content)
 	jsonStr = s.cleanJSON(jsonStr)
 
-	var result models.FoodPreview
+	var result models.ReferenceFood
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return nil, fmt.Errorf("failed to parse LLM response: %w, content: %s", err, content)
 	}
 
-	result.Description = description
 	return &result, nil
 }
 

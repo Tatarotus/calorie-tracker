@@ -14,7 +14,7 @@ type MockDB struct {
 	foodEntries  []models.FoodEntry
 	waterEntries []models.WaterEntry
 	goal         *models.Goal
-	cache        map[string]models.FoodEntry
+	cache        map[string]models.ReferenceFood
 	reference    map[string]models.ReferenceFood
 	lastRemoved  *models.FoodEntry
 	errorOnCall  map[string]error // Track which operations should return errors
@@ -23,7 +23,7 @@ type MockDB struct {
 // NewMockDB creates a new mock database
 func NewMockDB() *MockDB {
 	return &MockDB{
-		cache:       make(map[string]models.FoodEntry),
+		cache:       make(map[string]models.ReferenceFood),
 		reference:   make(map[string]models.ReferenceFood),
 		errorOnCall: make(map[string]error),
 	}
@@ -88,7 +88,7 @@ func (m *MockDB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 }
 
 // CacheFood implements DBProvider
-func (m *MockDB) CacheFood(entry models.FoodEntry) error {
+func (m *MockDB) CacheFood(f models.ReferenceFood) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -96,13 +96,13 @@ func (m *MockDB) CacheFood(entry models.FoodEntry) error {
 		return err
 	}
 
-	description := strings.ToLower(strings.TrimSpace(entry.Description))
-	m.cache[description] = entry
+	description := strings.ToLower(strings.TrimSpace(f.Name))
+	m.cache[description] = f
 	return nil
 }
 
 // GetCachedFood implements DBProvider
-func (m *MockDB) GetCachedFood(name string) (*models.FoodEntry, error) {
+func (m *MockDB) GetCachedFood(name string) (*models.ReferenceFood, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -276,6 +276,9 @@ func (m *MockDB) RemoveLastEntry() error {
 		lastIdx := len(m.foodEntries) - 1
 		m.lastRemoved = &m.foodEntries[lastIdx]
 		m.foodEntries = m.foodEntries[:lastIdx]
+	} else if len(m.waterEntries) > 0 {
+		lastIdx := len(m.waterEntries) - 1
+		m.waterEntries = m.waterEntries[:lastIdx]
 	}
 
 	return nil
@@ -314,7 +317,8 @@ func (m *MockDB) Clear() {
 	m.foodEntries = nil
 	m.waterEntries = nil
 	m.goal = nil
-	m.cache = make(map[string]models.FoodEntry)
+	m.cache = make(map[string]models.ReferenceFood)
+	m.reference = make(map[string]models.ReferenceFood)
 	m.lastRemoved = nil
 }
 
