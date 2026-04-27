@@ -28,7 +28,8 @@ type ParsedFood struct {
 }
 
 // Regex to capture [amount][unit] [name]
-var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(cup|cups|tablespoon|tablespoons|teaspoon|teaspoons|gram|grams|ounce|ounces|pound|pounds|ml|liter|liters)?\s*(.+)$`)
+// Requires whitespace before the name to avoid matching "100g" as amount+unit
+var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(tablespoons|tablespoon|teaspoons|teaspoon|ounces|ounce|pounds|pound|liters|liter|grams|gram|cups|cup|ml|gr|g)?\s+(.+)$`)
 
 func (m *FoodMatcher) removeAccents(s string) string {
 	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
@@ -57,7 +58,20 @@ func (m *FoodMatcher) Parse(desc string) ParsedFood {
 	if len(matches) > 2 && matches[2] != "" {
 		unit = m.normalizeUnit(matches[2])
 	}
-	name := m.normalizeName(matches[3])
+	name := ""
+	if len(matches) > 3 {
+		name = m.normalizeName(matches[3])
+	}
+
+	// If we matched a unit but no name, treat the whole input as a name
+	// (e.g., "100g" should be treated as a name, not amount=100, unit=gram)
+	if unit != "" && name == "" {
+		return ParsedFood{
+			Amount: 0,
+			Unit:   "",
+			Name:   desc,
+		}
+	}
 
 	return ParsedFood{
 		Amount: amount,
@@ -76,7 +90,7 @@ func (m *FoodMatcher) normalizeUnit(unit string) string {
 		return "tablespoon"
 	case "teaspoons":
 		return "teaspoon"
-	case "grams":
+	case "grams", "g", "gr":
 		return "gram"
 	case "ounces":
 		return "ounce"
@@ -93,7 +107,7 @@ func (m *FoodMatcher) normalizeName(name string) string {
 	name = m.removeAccents(strings.ToLower(strings.TrimSpace(name)))
 
 	// Remove common filler words
-	fillerWords := []string{"of", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for"}
+	fillerWords := []string{"of", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "de"}
 	words := strings.Fields(name)
 	var filtered []string
 	for _, word := range words {
@@ -121,8 +135,7 @@ func (m *FoodMatcher) Match(description string) (*models.FoodPreview, error) {
 	// Try to find in cache
 	cached, err := m.db.GetCachedFood(parsed.Name)
 	if err != nil {
-		// Log error but continue to LLM
-		return nil, nil
+		return nil, err
 	}
 
 	if cached != nil {

@@ -25,26 +25,26 @@ const (
 )
 
 type Model struct {
-	Tracker     *services.TrackerService
-	Mode        ViewMode
-	Stats       models.DailyStats
-	FoodInput   textinput.Model
-	WaterInput  textinput.Model
-	GoalInput   textinput.Model
-	EditInput   textinput.Model
-	Viewport    viewport.Model
-	EditField   int // 0: Cal, 1: Pro, 2: Carb, 3: Fat
-	Review      *models.ReviewResult
-	PendingFood *models.FoodPreview
-	TodayLog    []models.FoodEntry
-	WeekLog     []models.FoodEntry
-	MonthLog    []models.FoodEntry
-	RecentLog   []models.FoodEntry
+	Tracker         *services.TrackerService
+	Mode            ViewMode
+	Stats           models.DailyStats
+	FoodInput       textinput.Model
+	WaterInput      textinput.Model
+	GoalInput       textinput.Model
+	EditInput       textinput.Model
+	Viewport        viewport.Model
+	EditField       int // 0: Cal, 1: Pro, 2: Carb, 3: Fat
+	Review          *models.ReviewResult
+	PendingFood     *models.FoodPreview
+	TodayLog        []models.FoodEntry
+	WeekLog         []models.FoodEntry
+	MonthLog        []models.FoodEntry
+	RecentLog       []models.FoodEntry
 	GoalDescription string
-	Loading     bool
-	Error       error
-	Width       int
-	Height      int
+	Loading         bool
+	Error           error
+	Width           int
+	Height          int
 }
 
 func NewModel(tracker *services.TrackerService) Model {

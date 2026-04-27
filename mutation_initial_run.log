@@ -1,0 +1,18 @@
+Running mutation testing on critical packages...
+Packages: ./services ./db
+Minimum mutation score: 0%
+Max mutations to test: 100
+
+Generating mutations...
+..
+
+==========================================
+Mutation Testing Results
+==========================================
+Total mutations:  11
+Killed:           4
+Survived:         7
+Mutation score:   36%
+==========================================
+
+[0;32m✔ Mutation score OK (>= 0%)[0m

@@ -165,8 +165,8 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 	simpleWaterEntries := make([]models.WaterEntrySimple, len(waterEntries))
 	for i, e := range waterEntries {
 		simpleWaterEntries[i] = models.WaterEntrySimple{
-			Date:      e.Timestamp.Local().Format("2006-01-02"),
-			AmountML:  e.AmountML,
+			Date:     e.Timestamp.Local().Format("2006-01-02"),
+			AmountML: e.AmountML,
 		}
 	}
 

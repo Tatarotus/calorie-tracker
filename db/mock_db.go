@@ -3,19 +3,20 @@ package db
 import (
 	"calorie-tracker/models"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
 
 // MockDB is an in-memory implementation of DBProvider for testing
 type MockDB struct {
-	mu            sync.RWMutex
-	foodEntries   []models.FoodEntry
-	waterEntries  []models.WaterEntry
-	goal          *models.Goal
-	cache         map[string]models.FoodEntry
-	lastRemoved   *models.FoodEntry
-	errorOnCall   map[string]error // Track which operations should return errors
+	mu           sync.RWMutex
+	foodEntries  []models.FoodEntry
+	waterEntries []models.WaterEntry
+	goal         *models.Goal
+	cache        map[string]models.FoodEntry
+	lastRemoved  *models.FoodEntry
+	errorOnCall  map[string]error // Track which operations should return errors
 }
 
 // NewMockDB creates a new mock database
@@ -93,7 +94,8 @@ func (m *MockDB) CacheFood(entry models.FoodEntry) error {
 		return err
 	}
 
-	m.cache[entry.Description] = entry
+	description := strings.ToLower(strings.TrimSpace(entry.Description))
+	m.cache[description] = entry
 	return nil
 }
 
@@ -106,7 +108,8 @@ func (m *MockDB) GetCachedFood(name string) (*models.FoodEntry, error) {
 		return nil, err
 	}
 
-	entry, ok := m.cache[name]
+	description := strings.ToLower(strings.TrimSpace(name))
+	entry, ok := m.cache[description]
 	if !ok {
 		return nil, nil
 	}
@@ -167,10 +170,17 @@ func (m *MockDB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		return nil, err
 	}
 
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	rangeStart := todayStart.AddDate(0, 0, -days)
+
 	// Calculate daily stats from food and water entries
 	statsMap := make(map[string]*models.DailyStats)
 
 	for _, entry := range m.foodEntries {
+		if entry.Timestamp.Before(rangeStart) {
+			continue
+		}
 		dateStr := entry.Timestamp.Format("2006-01-02")
 		if _, ok := statsMap[dateStr]; !ok {
 			statsMap[dateStr] = &models.DailyStats{Date: dateStr}
@@ -182,6 +192,9 @@ func (m *MockDB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	}
 
 	for _, entry := range m.waterEntries {
+		if entry.Timestamp.Before(rangeStart) {
+			continue
+		}
 		dateStr := entry.Timestamp.Format("2006-01-02")
 		if _, ok := statsMap[dateStr]; !ok {
 			statsMap[dateStr] = &models.DailyStats{Date: dateStr}

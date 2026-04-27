@@ -207,25 +207,25 @@ func TestTrackerService_GetDailyStats(t *testing.T) {
 	mockDB := db.NewMockDB()
 	now := time.Now()
 	mockDB.AddFoodEntry(models.FoodEntry{
-		Calories: 100,
-		Protein:  5,
-		Carbs:    20,
-		Fat:      2,
+		Calories:  100,
+		Protein:   5,
+		Carbs:     20,
+		Fat:       2,
 		Timestamp: now,
 	})
 	mockDB.AddFoodEntry(models.FoodEntry{
-		Calories: 200,
-		Protein:  10,
-		Carbs:    30,
-		Fat:      5,
+		Calories:  200,
+		Protein:   10,
+		Carbs:     30,
+		Fat:       5,
 		Timestamp: now,
 	})
 	mockDB.AddWaterEntry(models.WaterEntry{
-		AmountML: 250,
+		AmountML:  250,
 		Timestamp: now,
 	})
 	mockDB.AddWaterEntry(models.WaterEntry{
-		AmountML: 500,
+		AmountML:  500,
 		Timestamp: now,
 	})
 

@@ -45,7 +45,7 @@ func TestNormalizeNameWithFillerWords(t *testing.T) {
 		{"of the apple", "apple"},
 		{"a cup of tea", "cup tea"},
 		{"an orange and a banana", "orange banana"},
-		{"butter with salt", "butter with salt"}, // "with" is not in fillerWords
+		{"butter with salt", "butter with salt"},         // "with" is not in fillerWords
 		{"no filler words here", "no filler words here"}, // none are filler words
 	}
 

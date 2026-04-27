@@ -5,10 +5,10 @@ import (
 )
 
 type Config struct {
-	SambaAPIKey    string
-	OpenAIBaseURL  string
-	FoodModel      string
-	ReviewModel    string
+	SambaAPIKey   string
+	OpenAIBaseURL string
+	FoodModel     string
+	ReviewModel   string
 }
 
 func Load() *Config {

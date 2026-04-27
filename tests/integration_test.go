@@ -1,4 +1,4 @@
-package main
+package main_test
 
 import (
 	"calorie-tracker/config"
@@ -164,11 +164,11 @@ func TestDailyStatsAggregationFlow(t *testing.T) {
 
 	// Add multiple food entries
 	foods := []struct {
-		desc      string
-		calories  float64
-		protein   float64
-		carbs     float64
-		fat       float64
+		desc     string
+		calories float64
+		protein  float64
+		carbs    float64
+		fat      float64
 	}{
 		{"Breakfast", 300, 15, 40, 10},
 		{"Lunch", 500, 25, 60, 20},
@@ -203,11 +203,11 @@ func TestDailyStatsAggregationFlow(t *testing.T) {
 	}
 
 	// Verify aggregation
-	expectedCalories := 1400.0  // 300 + 500 + 600
-	expectedProtein := 70.0     // 15 + 25 + 30
-	expectedCarbs := 150.0      // 40 + 60 + 50
-	expectedFat := 55.0         // 10 + 20 + 25
-	expectedWater := 750.0      // 250 + 500
+	expectedCalories := 1400.0 // 300 + 500 + 600
+	expectedProtein := 70.0    // 15 + 25 + 30
+	expectedCarbs := 150.0     // 40 + 60 + 50
+	expectedFat := 55.0        // 10 + 20 + 25
+	expectedWater := 750.0     // 250 + 500
 
 	if stats.Calories != expectedCalories {
 		t.Errorf("Expected %.0f calories, got %.0f", expectedCalories, stats.Calories)

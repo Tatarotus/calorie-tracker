@@ -22,16 +22,16 @@ func (m *MockLLMProvider) Call(model, prompt string) (string, error) {
 	m.CallCount++
 	m.LastModel = model
 	m.LastPrompt = prompt
-	
+
 	if m.Error != nil {
 		return "", m.Error
 	}
-	
+
 	// Check for model-specific response
 	if resp, ok := m.FixedResponses[model]; ok {
 		return resp, nil
 	}
-	
+
 	return m.Response, nil
 }
 
@@ -71,7 +71,7 @@ func MockHTTPServer(response string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		
+
 		resp := fmt.Sprintf(`{
 			"choices": [{
 				"message": {
@@ -79,7 +79,7 @@ func MockHTTPServer(response string) *httptest.Server {
 				}
 			}]
 		}`, response)
-		
+
 		w.Write([]byte(resp))
 	}))
 }
@@ -112,10 +112,10 @@ func MockHTTPServerWithJSON(model, jsonContent string) *httptest.Server {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		
+
 		resp := fmt.Sprintf(`{
 			"choices": [{
 				"message": {
@@ -123,7 +123,7 @@ func MockHTTPServerWithJSON(model, jsonContent string) *httptest.Server {
 				}
 			}]
 		}`, jsonContent)
-		
+
 		w.Write([]byte(resp))
 	}))
 }

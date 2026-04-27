@@ -177,13 +177,13 @@ func (m Model) editFoodPreviewView() string {
 
 func (m Model) renderTodayLogString() string {
 	var sb strings.Builder
-	
+
 	var total float64
 	if len(m.TodayLog) == 0 {
 		sb.WriteString("No entries yet today.")
 	} else {
 		for _, e := range m.TodayLog {
-			sb.WriteString(fmt.Sprintf("- %s → %s kcal\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories))))
+			fmt.Fprintf(&sb, "- %s → %s kcal\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories)))
 			total += e.Calories
 		}
 		sb.WriteString("\n" + StyleHeader.Render(fmt.Sprintf("Total: %.0f kcal", total)))
@@ -216,7 +216,7 @@ func (m Model) monthLogView() string {
 
 func (m Model) renderRangeLogString(entries []models.FoodEntry, title string) string {
 	var sb strings.Builder
-	
+
 	if len(entries) == 0 {
 		sb.WriteString("No entries found in this range.")
 	} else {
@@ -226,16 +226,16 @@ func (m Model) renderRangeLogString(entries []models.FoodEntry, title string) st
 			date := e.Timestamp.Local().Format("2006-01-02")
 			if date != currentDate {
 				if currentDate != "" {
-					sb.WriteString(fmt.Sprintf("  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n\n", dayTotal))
+					fmt.Fprintf(&sb, "  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n\n", dayTotal)
 				}
 				sb.WriteString(StyleHeader.Render(date) + "\n")
 				currentDate = date
 				dayTotal = 0
 			}
-			sb.WriteString(fmt.Sprintf("• %s (%s kcal)\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories))))
+			fmt.Fprintf(&sb, "• %s (%s kcal)\n", e.Description, StyleStats.Render(fmt.Sprintf("%.0f", e.Calories)))
 			dayTotal += e.Calories
 		}
-		sb.WriteString(fmt.Sprintf("  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n", dayTotal))
+		fmt.Fprintf(&sb, "  "+StyleBold.Render("Subtotal: %.0f kcal")+"\n", dayTotal)
 	}
 	return lipgloss.NewStyle().Width(58).Render(sb.String())
 }
@@ -247,7 +247,7 @@ func (m Model) renderReviewString() string {
 
 	r := m.Review
 	var sb strings.Builder
-	
+
 	if r.GoalProgress != "" {
 		sb.WriteString(StyleHeader.Render("🎯 Progress Towards Goal") + "\n")
 		sb.WriteString(r.GoalProgress + "\n\n")
@@ -255,7 +255,7 @@ func (m Model) renderReviewString() string {
 
 	sb.WriteString(StyleHeader.Render("Summary") + "\n")
 	sb.WriteString(r.Summary + "\n\n")
-	
+
 	if len(r.Issues) > 0 {
 		sb.WriteString(StyleHeader.Render("Issues Found") + "\n")
 		for _, i := range r.Issues {
@@ -263,7 +263,7 @@ func (m Model) renderReviewString() string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	if len(r.Patterns) > 0 {
 		sb.WriteString(StyleHeader.Render("Patterns Identified") + "\n")
 		for _, p := range r.Patterns {
@@ -271,7 +271,7 @@ func (m Model) renderReviewString() string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	if len(r.Suggestions) > 0 {
 		sb.WriteString(StyleHeader.Render("Suggestions") + "\n")
 		for _, s := range r.Suggestions {

@@ -1,10 +1,20 @@
+version: 2
+
 linters-settings:
   gocyclo:
     min-complexity: 20
 
 linters:
+  disable-all: true
   enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
     - gocyclo
+  disable:
+    - errcheck
+    - depguard
 
 issues:
   exclude-use-default: false

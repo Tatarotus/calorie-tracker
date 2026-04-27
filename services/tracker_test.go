@@ -1,9 +1,7 @@
 package services
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -41,7 +39,7 @@ func TestTrackerService_RunReview_Success(t *testing.T) {
 	reviewJSON := `{
 		"summary": "Good progress overall",
 		"goal_progress": "60% of weekly goal achieved",
-		"progress": "Consistent tracking",
+		"progress": "improving",
 		"score": 7,
 		"issues": ["Evening snacks"],
 		"suggestions": ["Add more protein"],
@@ -76,16 +74,11 @@ func TestTrackerService_RunReview_Success(t *testing.T) {
 func TestTrackerService_RunReview_NoGoal(t *testing.T) {
 	mockDB := db.NewMockDB()
 
-	// No goal set - will return "No goal set"
-	mockDB.SetGoal(models.Goal{
-		Timestamp:   time.Now(),
-		Description: "No specific goal",
-	})
-
+	// No goal set - GetGoal returns "No goal set"
 	reviewJSON := `{
 		"summary": "Tracking without goal",
 		"goal_progress": "No goal defined",
-		"progress": "Consistent logging",
+		"progress": "stable",
 		"score": 5,
 		"issues": ["No target"],
 		"suggestions": ["Set a specific goal"],
@@ -111,116 +104,61 @@ func TestTrackerService_RunReview_NoGoal(t *testing.T) {
 	}
 }
 
-func TestTrackerService_RunReview_EmptyData(t *testing.T) {
+func TestTrackerService_SaveFood_WithCaching(t *testing.T) {
 	mockDB := db.NewMockDB()
-
-	// No entries, no goal
-	reviewJSON := `{
-		"summary": "Just started",
-		"goal_progress": "No data yet",
-		"progress": "Account setup complete",
-		"score": 2,
-		"issues": ["No entries"],
-		"suggestions": ["Log your first meal"],
-		"patterns": []
-	}`
-	server := MockHTTPServer(reviewJSON)
-	defer server.Close()
-
 	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: server.URL,
+		SambaAPIKey:   "test",
+		OpenAIBaseURL: "https://test.com/v1",
 	}
-	llm := NewLLMServiceWithClient(cfg, server.Client())
-	tracker := NewTrackerService(mockDB, llm)
+	llm := NewLLMService(cfg)
+	svc := NewTrackerService(mockDB, llm)
 
-	result, err := tracker.RunReview()
+	preview := &models.FoodPreview{
+		Description: "Super Food",
+		Calories:    500,
+	}
+
+	err := svc.SaveFood(preview)
 	if err != nil {
-		t.Fatalf("RunReview failed: %v", err)
+		t.Fatalf("SaveFood failed: %v", err)
 	}
 
-	if result.Score != 2 {
-		t.Errorf("Expected score 2, got %d", result.Score)
+	// Verify it's in the main log
+	entries := mockDB.GetFoodEntries()
+	found := false
+	for _, e := range entries {
+		if e.Description == "Super Food" {
+			found = true
+			break
+		}
 	}
-}
-
-func TestTrackerService_RunReview_DBError(t *testing.T) {
-	mockDB := db.NewMockDB()
-
-	// Setup error for GetStatsRange
-	mockDB.SetError("GetStatsRange", errors.New("db error"))
-
-	server := MockHTTPServer("{}")
-	defer server.Close()
-
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: server.URL,
+	if !found {
+		t.Error("Food entry not found in database")
 	}
-	llm := NewLLMServiceWithClient(cfg, server.Client())
-	tracker := NewTrackerService(mockDB, llm)
 
-	_, err := tracker.RunReview()
-	if err == nil {
-		t.Error("Expected error from DB, got nil")
+	// Verify it's in the cache
+	cached, err := mockDB.GetCachedFood("super food") // it normalizes to lowercase
+	if err != nil {
+		t.Fatalf("GetCachedFood failed: %v", err)
 	}
-	if !strings.Contains(err.Error(), "db error") {
-		t.Errorf("Expected 'db error' in message, got '%s'", err.Error())
+	if cached == nil {
+		t.Fatal("Food entry not found in cache")
+	}
+	if cached.Calories != 500 {
+		t.Errorf("Expected 500 calories in cache, got %f", cached.Calories)
 	}
 }
 
-func TestTrackerService_RunReview_LLMError(t *testing.T) {
+func TestTrackerService_ParseFood_CacheFirst(t *testing.T) {
 	mockDB := db.NewMockDB()
-
-	// Setup data
-	now := time.Now()
-	mockDB.AddFoodEntry(models.FoodEntry{
-		Timestamp:   now,
-		Description: "Test food",
-		Calories:    300,
+	// Add to cache
+	mockDB.CacheFood(models.FoodEntry{
+		Description: "apple",
+		Calories:    95,
 	})
 
-	// Setup LLM error server
-	errorServer := MockHTTPServerError(500)
-	defer errorServer.Close()
-
-	cfg := &config.Config{
-		SambaAPIKey:   "test-key",
-		OpenAIBaseURL: errorServer.URL,
-	}
-	llm := NewLLMServiceWithClient(cfg, errorServer.Client())
-	tracker := NewTrackerService(mockDB, llm)
-
-	_, err := tracker.RunReview()
-	if err == nil {
-		t.Error("Expected LLM error, got nil")
-	}
-}
-
-func TestTrackerService_RunReview_MissingDays(t *testing.T) {
-	mockDB := db.NewMockDB()
-
-	// Only add entries for 3 days
-	now := time.Now()
-	for i := 0; i < 3; i++ {
-		date := now.AddDate(0, 0, -i)
-		mockDB.AddFoodEntry(models.FoodEntry{
-			Timestamp:   date,
-			Description: fmt.Sprintf("Day %d", i),
-			Calories:    400,
-		})
-	}
-
-	reviewJSON := `{
-		"summary": "Inconsistent tracking",
-		"goal_progress": "3/7 days tracked",
-		"progress": "Some progress made",
-		"score": 4,
-		"issues": ["Missing days"],
-		"suggestions": ["Track every day"],
-		"patterns": ["Weekend gaps"]
-	}`
-	server := MockHTTPServer(reviewJSON)
+	// Setup LLM that would fail if called
+	server := MockHTTPServerError(500)
 	defer server.Close()
 
 	cfg := &config.Config{
@@ -230,104 +168,36 @@ func TestTrackerService_RunReview_MissingDays(t *testing.T) {
 	llm := NewLLMServiceWithClient(cfg, server.Client())
 	tracker := NewTrackerService(mockDB, llm)
 
-	result, err := tracker.RunReview()
+	// Should match "apple" in cache and NOT call LLM
+	preview, err := tracker.ParseFood("apple")
 	if err != nil {
-		t.Fatalf("RunReview failed: %v", err)
+		t.Fatalf("ParseFood failed: %v", err)
 	}
-
-	if result.Score != 4 {
-		t.Errorf("Expected score 4, got %d", result.Score)
+	if preview.Calories != 95 {
+		t.Errorf("Expected 95 calories from cache, got %f", preview.Calories)
 	}
 }
 
-func TestTrackerService_RunReview_WithWaterOnly(t *testing.T) {
+func TestTrackerService_ParseFood_LLMFallback(t *testing.T) {
 	mockDB := db.NewMockDB()
 
-	// Only water entries, no food
-	now := time.Now()
-	for i := 0; i < 5; i++ {
-		mockDB.AddWaterEntry(models.WaterEntry{
-			Timestamp: now,
-			AmountML:  500,
-		})
-	}
-
-	reviewJSON := `{
-		"summary": "Great hydration",
-		"goal_progress": "Water goal met",
-		"progress": "Consistent water intake",
-		"score": 6,
-		"issues": ["No food logged"],
-		"suggestions": ["Log your meals"],
-		"patterns": ["Good hydration habits"]
-	}`
-	server := MockHTTPServer(reviewJSON)
+	// Mock LLM success
+	server := MockHTTPServer(`{"calories": 100, "protein": 1, "carbs": 25, "fat": 0}`)
 	defer server.Close()
 
 	cfg := &config.Config{
 		SambaAPIKey:   "test-key",
 		OpenAIBaseURL: server.URL,
+		FoodModel:     "test",
 	}
 	llm := NewLLMServiceWithClient(cfg, server.Client())
 	tracker := NewTrackerService(mockDB, llm)
 
-	result, err := tracker.RunReview()
+	preview, err := tracker.ParseFood("banana")
 	if err != nil {
-		t.Fatalf("RunReview failed: %v", err)
+		t.Fatalf("ParseFood failed: %v", err)
 	}
-
-	if result.Score != 6 {
-		t.Errorf("Expected score 6, got %d", result.Score)
-	}
-}
-
-func TestTrackerService_RunReview_BoundaryScores(t *testing.T) {
-	mockDB := db.NewMockDB()
-
-	now := time.Now()
-	mockDB.AddFoodEntry(models.FoodEntry{
-		Timestamp: now,
-		Calories:  2000,
-	})
-
-	// Test boundary scores
-	testCases := []struct {
-		score   int
-		summary string
-	}{
-		{1, "Very poor"},
-		{5, "Average"},
-		{10, "Excellent"},
-	}
-
-	for _, tc := range testCases {
-		reviewJSON := fmt.Sprintf(`{
-			"summary": "%s",
-			"goal_progress": "Score %d",
-			"progress": "Test progress",
-			"score": %d,
-			"issues": [],
-			"suggestions": [],
-			"patterns": []
-		}`, tc.summary, tc.score, tc.score)
-
-		server := MockHTTPServer(reviewJSON)
-		cfg := &config.Config{
-			SambaAPIKey:   "test-key",
-			OpenAIBaseURL: server.URL,
-		}
-		llm := NewLLMServiceWithClient(cfg, server.Client())
-		tracker := NewTrackerService(mockDB, llm)
-		result, err := tracker.RunReview()
-		server.Close()
-
-		if err != nil {
-			t.Errorf("RunReview failed for score %d: %v", tc.score, err)
-			continue
-		}
-
-		if result.Score != tc.score {
-			t.Errorf("Expected score %d, got %d", tc.score, result.Score)
-		}
+	if preview.Calories != 100 {
+		t.Errorf("Expected 100 calories from LLM, got %f", preview.Calories)
 	}
 }

@@ -41,12 +41,12 @@ func TestWaterEntryCreation(t *testing.T) {
 
 func TestDailyStatsAggregation(t *testing.T) {
 	stats := DailyStats{
-		Date:      "2024-01-15",
-		Calories:  2000,
-		Protein:   150,
-		Carbs:     200,
-		Fat:       70,
-		WaterML:   2000,
+		Date:     "2024-01-15",
+		Calories: 2000,
+		Protein:  150,
+		Carbs:    200,
+		Fat:      70,
+		WaterML:  2000,
 	}
 
 	if stats.Calories != 2000 {
@@ -96,13 +96,13 @@ func TestReviewDataCreation(t *testing.T) {
 
 func TestReviewResultCreation(t *testing.T) {
 	result := ReviewResult{
-		Summary:       "Good progress",
-		GoalProgress:  "On track",
-		Progress:      "75%",
-		Score:         8,
-		Issues:        []string{"Low protein on Monday"},
-		Suggestions:   []string{"Add more chicken"},
-		Patterns:      []string{"Consistent breakfast"},
+		Summary:      "Good progress",
+		GoalProgress: "On track",
+		Progress:     "75%",
+		Score:        8,
+		Issues:       []string{"Low protein on Monday"},
+		Suggestions:  []string{"Add more chicken"},
+		Patterns:     []string{"Consistent breakfast"},
 	}
 
 	if result.Score != 8 {

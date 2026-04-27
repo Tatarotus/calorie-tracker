@@ -330,20 +330,19 @@ func (m *Model) updatePendingFoodFromEdit() {
 }
 
 func (m Model) getStatsCmd() tea.Cmd {
-	return func() tea.Msg {
-		stats, err := m.Tracker.GetDailyStats(time.Now())
-		if err != nil {
-			return ErrMsg(err)
-		}
-
-		// In parallel, get recent entries for the dashboard
-		recent, _ := m.Tracker.GetFoodEntriesRange(1) // last 24h
-
-		return tea.Batch(
-			func() tea.Msg { return StatsMsg(stats) },
-			func() tea.Msg { return RecentLogMsg(recent) },
-		)()
-	}
+	return tea.Batch(
+		func() tea.Msg {
+			stats, err := m.Tracker.GetDailyStats(time.Now())
+			if err != nil {
+				return ErrMsg(err)
+			}
+			return StatsMsg(stats)
+		},
+		func() tea.Msg {
+			recent, _ := m.Tracker.GetFoodEntriesRange(1) // last 24h
+			return RecentLogMsg(recent)
+		},
+	)
 }
 
 func (m Model) getGoalCmd() tea.Cmd {

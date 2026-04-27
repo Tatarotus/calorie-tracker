@@ -14,6 +14,7 @@ import (
 type DB struct {
 	conn *sql.DB
 }
+
 func NewDB() (*DB, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -36,7 +37,6 @@ func NewTestDB(dbPath string) (*DB, error) {
 
 	return db, nil
 }
-
 
 func (db *DB) GetConn() *sql.DB {
 	return db.conn
@@ -106,7 +106,7 @@ func parseTimestamp(ts string) time.Time {
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
-		entry.Timestamp.UTC().Format(time.RFC3339Nano), 
+		entry.Timestamp.UTC().Format(time.RFC3339Nano),
 		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
 	)
 	return err
@@ -213,9 +213,9 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 		WHERE timestamp >= ?
 		GROUP BY date
 	`
-	
-	rows, err := db.conn.Query(query, 
-		rangeStartUTC.Format(time.RFC3339Nano), 
+
+	rows, err := db.conn.Query(query,
+		rangeStartUTC.Format(time.RFC3339Nano),
 		rangeStartUTC.Format(time.RFC3339Nano))
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (db *DB) GetCachedFood(description string) (*models.FoodEntry, error) {
 		"SELECT calories, protein, carbs, fat FROM food_cache WHERE description = ?",
 		description,
 	).Scan(&e.Calories, &e.Protein, &e.Carbs, &e.Fat)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -404,7 +404,6 @@ func (db *DB) RemoveLastEntry() error {
 	_, err = db.conn.Exec(deleteQuery, id)
 	return err
 }
-
 
 func (db *DB) Close() error {
 	return db.conn.Close()

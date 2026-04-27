@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"calorie-tracker/db"
 	"calorie-tracker/models"
 	"testing"
@@ -8,7 +9,7 @@ import (
 
 func TestFoodMatcherRemoveAccents(t *testing.T) {
 	matcher := NewFoodMatcher(nil)
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -43,7 +44,7 @@ func TestFoodMatcherRemoveAccents(t *testing.T) {
 
 func TestFoodMatcherNormalizeUnit(t *testing.T) {
 	matcher := NewFoodMatcher(nil)
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -136,15 +137,30 @@ func TestNewFoodMatcher(t *testing.T) {
 
 func TestFoodMatcherParse(t *testing.T) {
 	matcher := NewFoodMatcher(nil)
-	
-	// Test parsing a simple string
-	result := matcher.Parse("1 apple")
-	// Just verify it doesn't panic and returns a struct
-	if result.Amount != 0 || result.Unit != "" || result.Name != "" {
-		t.Logf("Parse returned: quantity=%v, unit=%s, name=%s", result.Amount, result.Unit, result.Name)
+
+	testCases := []struct {
+		input    string
+		expected ParsedFood
+	}{
+		{"1 apple", ParsedFood{Amount: 1, Unit: "", Name: "apple"}},
+		{"1.5 cups milk", ParsedFood{Amount: 1.5, Unit: "cup", Name: "milk"}},
+		{"apple", ParsedFood{Amount: 0, Unit: "", Name: "apple"}},
+		{"100g", ParsedFood{Amount: 0, Unit: "", Name: "100g"}}, // Should fail regex and return as name
+	}
+
+	for _, tc := range testCases {
+		result := matcher.Parse(tc.input)
+		if result.Amount != tc.expected.Amount {
+			t.Errorf("Parse(%q) amount = %f, want %f", tc.input, result.Amount, tc.expected.Amount)
+		}
+		if result.Unit != tc.expected.Unit {
+			t.Errorf("Parse(%q) unit = %q, want %q", tc.input, result.Unit, tc.expected.Unit)
+		}
+		if result.Name != tc.expected.Name {
+			t.Errorf("Parse(%q) name = %q, want %q", tc.input, result.Name, tc.expected.Name)
+		}
 	}
 }
-
 func TestFoodMatcher_Match_Cached(t *testing.T) {
 	mockDB := db.NewMockDB()
 	// Add a cached entry
@@ -155,18 +171,18 @@ func TestFoodMatcher_Match_Cached(t *testing.T) {
 		Carbs:       25,
 		Fat:         0.3,
 	})
-	
+
 	matcher := NewFoodMatcher(mockDB)
-	
+
 	result, err := matcher.Match("apple")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected non-nil result")
 	}
-	
+
 	if result.Calories != 95 {
 		t.Errorf("Expected Calories 95, got %f", result.Calories)
 	}
@@ -175,12 +191,12 @@ func TestFoodMatcher_Match_Cached(t *testing.T) {
 func TestFoodMatcher_Match_NotCached(t *testing.T) {
 	mockDB := db.NewMockDB()
 	matcher := NewFoodMatcher(mockDB)
-	
+
 	result, err := matcher.Match("unknown food xyz")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
-	
+
 	if result != nil {
 		t.Error("Expected nil result for unknown food")
 	}
@@ -189,12 +205,12 @@ func TestFoodMatcher_Match_NotCached(t *testing.T) {
 func TestFoodMatcher_Match_EmptyDescription(t *testing.T) {
 	mockDB := db.NewMockDB()
 	matcher := NewFoodMatcher(mockDB)
-	
+
 	result, err := matcher.Match("")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
-	
+
 	if result != nil {
 		t.Error("Expected nil result for empty description")
 	}
@@ -202,16 +218,11 @@ func TestFoodMatcher_Match_EmptyDescription(t *testing.T) {
 
 func TestFoodMatcher_Match_WithError(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.SetError("GetCachedFood", testError("db error"))
+	mockDB.SetError("GetCachedFood", fmt.Errorf("db error"))
 	matcher := NewFoodMatcher(mockDB)
-	
-	result, err := matcher.Match("apple")
-	if err != nil {
-		t.Errorf("Expected no error (should continue to LLM), got %v", err)
-	}
-	
-	// Should return nil and continue to LLM
-	if result != nil {
-		t.Error("Expected nil result when cache fails")
+
+	_, err := matcher.Match("apple")
+	if err == nil {
+		t.Error("Expected error from Match when DB fails")
 	}
 }
