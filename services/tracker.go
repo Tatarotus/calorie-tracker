@@ -22,18 +22,74 @@ func NewTrackerService(db db.DBProvider, llm *LLMService) *TrackerService {
 }
 
 func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, error) {
-	matched, err := s.matcher.Match(description)
+	parsed := s.matcher.Parse(description)
+	if parsed.Name == "" {
+		return nil, fmt.Errorf("could not parse food name from: %s", description)
+	}
+
+	// 1. Check local reference database first (Source of Truth)
+	ref, err := s.db.GetReferenceFood(parsed.Name)
+	if err != nil {
+		return nil, fmt.Errorf("reference lookup error: %w", err)
+	}
+
+	if ref != nil {
+		// Use deterministic scaling
+		return s.scaleMacros(ref, parsed), nil
+	}
+
+	// 2. Check cache for previous LLM results
+	matched, err := s.db.GetCachedFood(parsed.Name)
 	if err != nil {
 		return nil, fmt.Errorf("cache match error: %w", err)
 	}
 	if matched != nil {
-		return matched, nil
+		return &models.FoodPreview{
+			Description: matched.Description,
+			Calories:    matched.Calories,
+			Protein:     matched.Protein,
+			Carbs:       matched.Carbs,
+			Fat:         matched.Fat,
+		}, nil
 	}
+
+	// 3. Fallback to LLM
 	preview, err := s.llm.ParseFood(description)
 	if err != nil {
 		return nil, err
 	}
+
+	// Validate LLM response
+	if preview.Calories < 0 || preview.Protein < 0 || preview.Carbs < 0 || preview.Fat < 0 {
+		return nil, fmt.Errorf("LLM returned unrealistic negative values")
+	}
+	if preview.Calories > 5000 {
+		return nil, fmt.Errorf("LLM returned unrealistic high calorie value: %.0f", preview.Calories)
+	}
+
 	return preview, nil
+}
+
+func (s *TrackerService) scaleMacros(ref *models.ReferenceFood, parsed ParsedFood) *models.FoodPreview {
+	amount := parsed.Amount
+	if amount == 0 {
+		amount = ref.BaseQuantity
+	}
+
+	scale := amount / ref.BaseQuantity
+
+	desc := fmt.Sprintf("%.1f%s %s", amount, ref.Unit, ref.Name)
+	if ref.Unit == "unit" {
+		desc = fmt.Sprintf("%.0f %s", amount, ref.Name)
+	}
+
+	return &models.FoodPreview{
+		Description: desc,
+		Calories:    ref.Calories * scale,
+		Protein:     ref.Protein * scale,
+		Carbs:       ref.Carbs * scale,
+		Fat:         ref.Fat * scale,
+	}
 }
 
 func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {

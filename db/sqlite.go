@@ -70,10 +70,40 @@ func (db *DB) migrate() error {
 			timestamp DATETIME,
 			description TEXT
 		)`,
+		`CREATE TABLE IF NOT EXISTS reference_foods (
+			name TEXT PRIMARY KEY,
+			base_quantity REAL,
+			unit TEXT,
+			calories REAL,
+			protein REAL,
+			carbs REAL,
+			fat REAL
+		)`,
 	}
 
 	for _, q := range queries {
 		if _, err := db.conn.Exec(q); err != nil {
+			return err
+		}
+	}
+
+	return db.seedReferenceFoods()
+}
+
+func (db *DB) seedReferenceFoods() error {
+	foods := []models.ReferenceFood{
+		{Name: "arroz branco", BaseQuantity: 100, Unit: "gram", Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3},
+		{Name: "frango grelhado", BaseQuantity: 100, Unit: "gram", Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6},
+		{Name: "ovo", BaseQuantity: 1, Unit: "unit", Calories: 70, Protein: 6, Carbs: 0.6, Fat: 5},
+		{Name: "banana", BaseQuantity: 1, Unit: "unit", Calories: 89, Protein: 1.1, Carbs: 23, Fat: 0.3},
+	}
+
+	for _, f := range foods {
+		_, err := db.conn.Exec(
+			"INSERT OR IGNORE INTO reference_foods (name, base_quantity, unit, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			f.Name, f.BaseQuantity, f.Unit, f.Calories, f.Protein, f.Carbs, f.Fat,
+		)
+		if err != nil {
 			return err
 		}
 	}
@@ -319,6 +349,23 @@ func (db *DB) GetCachedFood(description string) (*models.FoodEntry, error) {
 	}
 	e.Description = description
 	return &e, nil
+}
+
+func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	var f models.ReferenceFood
+	err := db.conn.QueryRow(
+		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ? OR ? LIKE '%' || name || '%'",
+		name, name,
+	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Calories, &f.Protein, &f.Carbs, &f.Fat)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
 }
 
 func (db *DB) CacheFood(entry models.FoodEntry) error {

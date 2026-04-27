@@ -15,6 +15,7 @@ type MockDB struct {
 	waterEntries []models.WaterEntry
 	goal         *models.Goal
 	cache        map[string]models.FoodEntry
+	reference    map[string]models.ReferenceFood
 	lastRemoved  *models.FoodEntry
 	errorOnCall  map[string]error // Track which operations should return errors
 }
@@ -23,6 +24,7 @@ type MockDB struct {
 func NewMockDB() *MockDB {
 	return &MockDB{
 		cache:       make(map[string]models.FoodEntry),
+		reference:   make(map[string]models.ReferenceFood),
 		errorOnCall: make(map[string]error),
 	}
 }
@@ -115,6 +117,32 @@ func (m *MockDB) GetCachedFood(name string) (*models.FoodEntry, error) {
 	}
 
 	return &entry, nil
+}
+
+// GetReferenceFood implements DBProvider
+func (m *MockDB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if err := m.errorOnCall["GetReferenceFood"]; err != nil {
+		return nil, err
+	}
+
+	name = strings.ToLower(strings.TrimSpace(name))
+	for refName, ref := range m.reference {
+		if refName == name || strings.Contains(name, refName) {
+			return &ref, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// SeedReferenceFood adds a reference food to the mock
+func (m *MockDB) SeedReferenceFood(f models.ReferenceFood) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.reference[strings.ToLower(f.Name)] = f
 }
 
 // AddWaterEntry implements DBProvider
