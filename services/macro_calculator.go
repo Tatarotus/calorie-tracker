@@ -19,9 +19,31 @@ func (c *MacroCalculator) Scale(ref models.ReferenceFood, amount float64) models
 
 	scale := amount / ref.BaseQuantity
 
-	desc := fmt.Sprintf("%.1f%s %s", amount, ref.Unit, ref.Name)
-	if ref.Unit == "unit" || ref.Unit == "unidade" {
+	unitDisplay := ref.Unit
+	switch ref.Unit {
+	case "gram":
+		unitDisplay = "g"
+	case "cup":
+		unitDisplay = "cup"
+	case "tablespoon":
+		unitDisplay = "tbsp"
+	case "teaspoon":
+		unitDisplay = "tsp"
+	case "ounce":
+		unitDisplay = "oz"
+	case "pound":
+		unitDisplay = "lb"
+	case "liter":
+		unitDisplay = "L"
+	case "unit", "unidade":
+		unitDisplay = ""
+	}
+
+	var desc string
+	if unitDisplay == "" {
 		desc = fmt.Sprintf("%.0f %s", amount, ref.Name)
+	} else {
+		desc = fmt.Sprintf("%.1f%s %s", amount, unitDisplay, ref.Name)
 	}
 
 	return models.FoodPreview{

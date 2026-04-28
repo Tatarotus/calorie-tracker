@@ -45,42 +45,42 @@ func (db *DB) GetConn() *sql.DB {
 func (db *DB) migrate() error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS food_entries (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME,
-			description TEXT,
-			calories REAL,
-			protein REAL,
-			carbs REAL,
-			fat REAL
-		)`,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	timestamp DATETIME,
+	description TEXT,
+	calories REAL,
+	protein REAL,
+	carbs REAL,
+	fat REAL
+	)`,
 		`CREATE TABLE IF NOT EXISTS water_entries (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME,
-			amount_ml REAL
-		)`,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	timestamp DATETIME,
+	amount_ml REAL
+	)`,
 		`CREATE TABLE IF NOT EXISTS food_cache (
-			description TEXT PRIMARY KEY,
-			base_quantity REAL,
-			unit TEXT,
-			calories REAL,
-			protein REAL,
-			carbs REAL,
-			fat REAL
-		)`,
+	description TEXT PRIMARY KEY,
+	base_quantity REAL,
+	unit TEXT,
+	calories REAL,
+	protein REAL,
+	carbs REAL,
+	fat REAL
+	)`,
 		`CREATE TABLE IF NOT EXISTS goals (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME,
-			description TEXT
-		)`,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	timestamp DATETIME,
+	description TEXT
+	)`,
 		`CREATE TABLE IF NOT EXISTS reference_foods (
-			name TEXT PRIMARY KEY,
-			base_quantity REAL,
-			unit TEXT,
-			calories REAL,
-			protein REAL,
-			carbs REAL,
-			fat REAL
-		)`,
+	name TEXT PRIMARY KEY,
+	base_quantity REAL,
+	unit TEXT,
+	calories REAL,
+	protein REAL,
+	carbs REAL,
+	fat REAL
+	)`,
 	}
 
 	for _, q := range queries {
@@ -89,7 +89,27 @@ func (db *DB) migrate() error {
 		}
 	}
 
+	if err := db.migrateExistingTables(); err != nil {
+		return err
+	}
+
 	return db.seedReferenceFoods()
+}
+
+func (db *DB) migrateExistingTables() error {
+	migrations := []string{
+		`ALTER TABLE food_cache ADD COLUMN base_quantity REAL`,
+		`ALTER TABLE reference_foods ADD COLUMN base_quantity REAL`,
+	}
+
+	for _, q := range migrations {
+		_, err := db.conn.Exec(q)
+		if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+			continue
+		}
+	}
+
+	return nil
 }
 
 func (db *DB) seedReferenceFoods() error {
