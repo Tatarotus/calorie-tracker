@@ -121,13 +121,10 @@ func (db *DB) migrateExistingTables() error {
 		}
 
 		// Copy data from old table if it exists
-		if _, err := db.conn.Exec(`
-			INSERT OR IGNORE INTO food_cache_new (description, calories, protein, carbs, fat)
-			SELECT description, calories, protein, carbs, fat FROM food_cache
-		`); err != nil {
-			// If insert fails, the new table might already have data
-			// This is okay, we just skip the copy
-		}
+		_, _ = db.conn.Exec(`
+		INSERT OR IGNORE INTO food_cache_new (description, calories, protein, carbs, fat)
+		SELECT description, calories, protein, carbs, fat FROM food_cache
+	`)
 
 		// Drop old table and rename new one
 		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS food_cache`); err != nil {
@@ -159,12 +156,10 @@ func (db *DB) migrateExistingTables() error {
 			return fmt.Errorf("creating reference_foods_new: %w", err)
 		}
 
-		if _, err := db.conn.Exec(`
-			INSERT OR IGNORE INTO reference_foods_new (name, calories, protein, carbs, fat)
-			SELECT name, calories, protein, carbs, fat FROM reference_foods
-		`); err != nil {
-			// Ignore if insert fails
-		}
+		_, _ = db.conn.Exec(`
+		INSERT OR IGNORE INTO reference_foods_new (name, calories, protein, carbs, fat)
+		SELECT name, calories, protein, carbs, fat FROM reference_foods
+	`)
 
 		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS reference_foods`); err != nil {
 			return fmt.Errorf("dropping old reference_foods: %w", err)
