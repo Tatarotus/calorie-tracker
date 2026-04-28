@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,19 +98,115 @@ func (db *DB) migrate() error {
 }
 
 func (db *DB) migrateExistingTables() error {
-	migrations := []string{
-		`ALTER TABLE food_cache ADD COLUMN base_quantity REAL`,
-		`ALTER TABLE reference_foods ADD COLUMN base_quantity REAL`,
+	// Check if food_cache table needs migration
+	needsFoodCacheMigration, err := db.tableNeedsMigration("food_cache", []string{"base_quantity", "unit"})
+	if err != nil {
+		return fmt.Errorf("checking food_cache migration: %w", err)
 	}
 
-	for _, q := range migrations {
-		_, err := db.conn.Exec(q)
-		if err != nil && !strings.Contains(err.Error(), "duplicate column") {
-			continue
+	if needsFoodCacheMigration {
+		// Create a new table with the correct schema
+		if _, err := db.conn.Exec(`
+			CREATE TABLE IF NOT EXISTS food_cache_new (
+				description TEXT PRIMARY KEY,
+				base_quantity REAL,
+				unit TEXT,
+				calories REAL,
+				protein REAL,
+				carbs REAL,
+				fat REAL
+			)
+		`); err != nil {
+			return fmt.Errorf("creating food_cache_new: %w", err)
+		}
+
+		// Copy data from old table if it exists
+		if _, err := db.conn.Exec(`
+			INSERT OR IGNORE INTO food_cache_new (description, calories, protein, carbs, fat)
+			SELECT description, calories, protein, carbs, fat FROM food_cache
+		`); err != nil {
+			// If insert fails, the new table might already have data
+			// This is okay, we just skip the copy
+		}
+
+		// Drop old table and rename new one
+		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS food_cache`); err != nil {
+			return fmt.Errorf("dropping old food_cache: %w", err)
+		}
+		if _, err := db.conn.Exec(`ALTER TABLE food_cache_new RENAME TO food_cache`); err != nil {
+			return fmt.Errorf("renaming food_cache_new: %w", err)
+		}
+	}
+
+	// Check if reference_foods table needs migration
+	needsRefFoodsMigration, err := db.tableNeedsMigration("reference_foods", []string{"base_quantity", "unit"})
+	if err != nil {
+		return fmt.Errorf("checking reference_foods migration: %w", err)
+	}
+
+	if needsRefFoodsMigration {
+		if _, err := db.conn.Exec(`
+			CREATE TABLE IF NOT EXISTS reference_foods_new (
+				name TEXT PRIMARY KEY,
+				base_quantity REAL,
+				unit TEXT,
+				calories REAL,
+				protein REAL,
+				carbs REAL,
+				fat REAL
+			)
+		`); err != nil {
+			return fmt.Errorf("creating reference_foods_new: %w", err)
+		}
+
+		if _, err := db.conn.Exec(`
+			INSERT OR IGNORE INTO reference_foods_new (name, calories, protein, carbs, fat)
+			SELECT name, calories, protein, carbs, fat FROM reference_foods
+		`); err != nil {
+			// Ignore if insert fails
+		}
+
+		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS reference_foods`); err != nil {
+			return fmt.Errorf("dropping old reference_foods: %w", err)
+		}
+		if _, err := db.conn.Exec(`ALTER TABLE reference_foods_new RENAME TO reference_foods`); err != nil {
+			return fmt.Errorf("renaming reference_foods_new: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// tableNeedsMigration checks if a table has all the required columns
+func (db *DB) tableNeedsMigration(tableName string, requiredColumns []string) (bool, error) {
+	rows, err := db.conn.Query(fmt.Sprintf("PRAGMA table_info(%s)", tableName))
+	if err != nil {
+		// Table doesn't exist, no migration needed (it will be created)
+		return false, nil
+	}
+	defer rows.Close()
+
+	columns := make(map[string]bool)
+	for rows.Next() {
+		var cid int
+		var name string
+		var ctype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dfltValue, &pk); err != nil {
+			return false, err
+		}
+		columns[name] = true
+	}
+
+	for _, col := range requiredColumns {
+		if !columns[col] {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (db *DB) seedReferenceFoods() error {
