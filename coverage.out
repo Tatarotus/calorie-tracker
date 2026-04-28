@@ -1,16 +1,10 @@
 mode: set
+calorie-tracker/utils/time.go:5.37,7.2 1 1
+calorie-tracker/utils/time.go:9.44,11.2 1 1
 calorie-tracker/config/config.go:14.21,21.2 1 1
 calorie-tracker/config/config.go:23.42,24.40 1 1
 calorie-tracker/config/config.go:24.40,26.3 1 1
 calorie-tracker/config/config.go:27.2,27.17 1 1
-calorie-tracker/utils/time.go:5.37,7.2 1 1
-calorie-tracker/utils/time.go:9.44,11.2 1 1
-calorie-tracker/main.go:16.13,18.27 2 0
-calorie-tracker/main.go:18.27,22.3 3 0
-calorie-tracker/main.go:24.2,25.16 2 0
-calorie-tracker/main.go:25.16,27.3 1 0
-calorie-tracker/main.go:28.2,34.35 5 0
-calorie-tracker/main.go:34.35,37.3 2 0
 calorie-tracker/db/mock_db.go:24.26,30.2 1 1
 calorie-tracker/db/mock_db.go:33.56,37.2 3 1
 calorie-tracker/db/mock_db.go:40.47,44.2 3 1
@@ -220,6 +214,12 @@ calorie-tracker/db/sqlite.go:559.25,561.3 1 1
 calorie-tracker/db/sqlite.go:561.8,563.3 1 0
 calorie-tracker/db/sqlite.go:565.2,566.12 2 1
 calorie-tracker/db/sqlite.go:569.29,571.2 1 1
+calorie-tracker/main.go:16.13,18.27 2 0
+calorie-tracker/main.go:18.27,22.3 3 0
+calorie-tracker/main.go:24.2,25.16 2 0
+calorie-tracker/main.go:25.16,27.3 1 0
+calorie-tracker/main.go:28.2,34.35 5 0
+calorie-tracker/main.go:34.35,37.3 2 0
 calorie-tracker/services/food_parser.go:16.34,18.2 1 1
 calorie-tracker/services/food_parser.go:30.53,34.2 3 1
 calorie-tracker/services/food_parser.go:36.52,43.22 5 1
