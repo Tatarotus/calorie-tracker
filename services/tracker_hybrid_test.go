@@ -82,7 +82,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 		if math.Abs(preview.Calories-expectedCalories) > 0.01 {
 			t.Errorf("Expected %.2f calories, got %.2f", expectedCalories, preview.Calories)
 		}
-		if preview.Description != "2 egg + 180.0g rice + 13.5g olive oil" {
+		if preview.Description != "2.0 egg + 1.0bowl rice + 1.0tablespoon olive oil" {
 			t.Errorf("Expected combined description, got %q", preview.Description)
 		}
 	})
@@ -141,6 +141,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 		if preview.Description != "1 pao frances" {
 			t.Errorf("Expected unit description, got %q", preview.Description)
 		}
+
 		if preview.Calories != 135 {
 			t.Errorf("Expected 135 calories from unit LLM data, got %f", preview.Calories)
 		}

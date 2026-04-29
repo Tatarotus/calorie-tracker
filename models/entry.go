@@ -13,6 +13,8 @@ type FoodEntry struct {
 }
 
 type FoodPreview struct {
+	Name        string  `json:"name"`
+	Unit        string  `json:"unit"`
 	Description string  `json:"description"`
 	Calories    float64 `json:"calories"`
 	Protein     float64 `json:"protein"`

@@ -478,9 +478,23 @@ func (db *DB) GetCachedFood(description string) (*models.ReferenceFood, error) {
 func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
 	name = strings.ToLower(strings.TrimSpace(name))
 	var f models.ReferenceFood
+	// Try Exact Match first
 	err := db.conn.QueryRow(
-		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ? OR ? LIKE '%' || name || '%'",
-		name, name,
+		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ?",
+		name,
+	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
+
+	if err == nil {
+		return &f, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// Try Fuzzy Match
+	err = db.conn.QueryRow(
+		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE ? LIKE '%' || name || '%'",
+		name,
 	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
 
 	if err == sql.ErrNoRows {

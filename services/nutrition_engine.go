@@ -94,30 +94,39 @@ func (e *NutritionEngine) resolveSingle(parsed ParsedFood) (*models.FoodPreview,
 		return nil, false, nil
 	}
 
-	// Step 2: Check Local Reference Database (Source of Truth)
-	ref, err := e.db.GetReferenceFood(parsed.Name)
-	if err != nil {
-		return nil, false, fmt.Errorf("reference lookup error: %w", err)
-	}
-
-	if ref != nil {
-		// Step 3: Deterministic Scaling
-		if amount, ok := e.scaledAmount(*ref, parsed); ok {
-			preview := e.calculator.Scale(*ref, amount)
+	// 1. Exact Match Cache (Highest Priority)
+	cached, err := e.db.GetCachedFood(parsed.Name)
+	if err == nil && cached != nil {
+		// For Cache, we only allow scaling if the units match exactly or ref has no unit.
+		// We DON'T want to estimate grams for a cache hit if they specifically asked for 'unit'.
+		if amount, ok := e.scaledAmount(*cached, parsed, false); ok {
+			preview := e.calculator.Scale(*cached, amount)
+			preview.Name = parsed.Name
+			preview.Unit = parsed.Unit
+			preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
 			return &preview, true, nil
 		}
 	}
 
-	// Step 4: Check Cache Layer (Previous LLM results)
-	cached, err := e.db.GetCachedFood(parsed.Name)
-	if err != nil {
-		return nil, false, fmt.Errorf("cache lookup error: %w", err)
+	// 2. Exact Match Reference
+	ref, err := e.db.GetReferenceFood(parsed.Name)
+	if err == nil && ref != nil && strings.EqualFold(ref.Name, parsed.Name) {
+		if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+			preview := e.calculator.Scale(*ref, amount)
+			preview.Name = parsed.Name
+			preview.Unit = parsed.Unit
+			preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+			return &preview, true, nil
+		}
 	}
 
-	if cached != nil {
-		// Scale cached base values to requested amount
-		if amount, ok := e.scaledAmount(*cached, parsed); ok {
-			preview := e.calculator.Scale(*cached, amount)
+	// 3. Fuzzy Match Reference
+	if ref != nil {
+		if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+			preview := e.calculator.Scale(*ref, amount)
+			preview.Name = parsed.Name
+			preview.Unit = parsed.Unit
+			preview.Description = e.formatDescription(amount, e.parser.normalizeUnit(ref.Unit), ref.Name)
 			return &preview, true, nil
 		}
 	}
@@ -135,14 +144,29 @@ func (e *NutritionEngine) resolveSingle(parsed ParsedFood) (*models.FoodPreview,
 			if err := e.db.CacheFood(*ref); err != nil {
 				fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
 			}
-			if amount, ok := e.scaledAmount(*ref, parsed); ok {
+			if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
 				preview := e.calculator.Scale(*ref, amount)
+				preview.Name = parsed.Name
+				preview.Unit = parsed.Unit
 				return &preview, true, nil
 			}
 		}
 	}
 
 	return nil, false, nil
+}
+
+func (e *NutritionEngine) formatDescription(amount float64, unit string, name string) string {
+	if unit == "unit" || unit == "" {
+		if amount == 1 {
+			return fmt.Sprintf("%g %s", amount, name)
+		}
+		return fmt.Sprintf("%.1f %s", amount, name)
+	}
+	if unit == "gram" {
+		return fmt.Sprintf("%.1fg %s", amount, name)
+	}
+	return fmt.Sprintf("%.1f%s %s", amount, unit, name)
 }
 
 func (e *NutritionEngine) analyzeWithLLMFallback(description string, parsed ParsedFood) (*models.FoodPreview, error) {
@@ -171,6 +195,8 @@ func (e *NutritionEngine) analyzeWithLLMFallback(description string, parsed Pars
 
 	// Scale to requested amount
 	preview := e.calculator.Scale(*llmRef, parsed.Amount)
+	preview.Name = parsed.Name
+	preview.Unit = parsed.Unit
 	return &preview, nil
 }
 
@@ -199,20 +225,28 @@ func (e *NutritionEngine) analyzeWholeMealWithLLMFallback(description string) (*
 	return &preview, nil
 }
 
-func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFood) (float64, bool) {
+func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFood, allowEstimation bool) (float64, bool) {
 	if parsed.Amount <= 0 {
 		return ref.BaseQuantity, true
 	}
 
+	normRefUnit := e.parser.normalizeUnit(ref.Unit)
 	if parsed.Unit == "" {
+		if normRefUnit == "" || normRefUnit == "unit" {
+			return parsed.Amount, true
+		}
+		// If ref is gram, we can assume unitless amount is grams
+		if normRefUnit == "gram" {
+			return parsed.Amount, true
+		}
 		return parsed.Amount, true
 	}
 
-	if e.parser.normalizeUnit(ref.Unit) == parsed.Unit {
+	if normRefUnit == parsed.Unit {
 		return parsed.Amount, true
 	}
 
-	if e.parser.normalizeUnit(ref.Unit) == "gram" {
+	if allowEstimation && normRefUnit == "gram" {
 		grams := e.estimateGrams(parsed)
 		return grams, grams > 0
 	}
@@ -241,11 +275,26 @@ func (e *NutritionEngine) estimateGrams(parsed ParsedFood) float64 {
 		return amount * 100
 	case "slice":
 		return amount * e.gramsPerSlice(parsed.Name)
+	case "unit":
+		return amount * e.gramsPerUnit(parsed.Name)
 	case "handful":
 		return amount * 28
 	default:
 		return 0
 	}
+}
+
+func (e *NutritionEngine) gramsPerUnit(name string) float64 {
+	if containsAny(name, "bread", "pao") {
+		return e.gramsPerSlice(name)
+	}
+	if containsAny(name, "egg", "ovo") {
+		return 50
+	}
+	if containsAny(name, "apple", "maca") {
+		return 180
+	}
+	return 100
 }
 
 func (e *NutritionEngine) gramsPerTablespoon(name string) float64 {

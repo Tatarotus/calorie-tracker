@@ -296,6 +296,17 @@ func (m *MockDB) Close() error {
 	return nil
 }
 
+func (m *MockDB) GetAllCacheEntries() ([]models.ReferenceFood, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []models.ReferenceFood
+	for _, entry := range m.cache {
+		result = append(result, entry)
+	}
+	return result, nil
+}
+
 // GetFoodEntries returns all food entries (for testing)
 func (m *MockDB) GetFoodEntries() []models.FoodEntry {
 	m.mu.RLock()

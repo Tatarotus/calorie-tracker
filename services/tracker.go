@@ -43,22 +43,40 @@ func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 		return err
 	}
 
-	parsed := s.engine.parser.Parse(preview.Description)
-	if parsed.Name != "" && parsed.Amount > 0 {
-		caloriesPer100 := (preview.Calories / parsed.Amount) * 100
-		proteinPer100 := (preview.Protein / parsed.Amount) * 100
-		carbsPer100 := (preview.Carbs / parsed.Amount) * 100
-		fatPer100 := (preview.Fat / parsed.Amount) * 100
+	// Use provided Name/Unit if available, otherwise parse
+	name := preview.Name
+	unit := preview.Unit
+	amount := 0.0
 
+	if name == "" {
+		parsed := s.engine.parser.Parse(preview.Description)
+		name = parsed.Name
+		unit = parsed.Unit
+		amount = parsed.Amount
+	} else {
+		// If Name is provided, we need to extract the amount from description
+		// or assume 1 if not easily parsable from preview.
+		// For consistency, let's parse the description anyway to get the amount.
+		parsed := s.engine.parser.Parse(preview.Description)
+		amount = parsed.Amount
+	}
+
+	if name != "" && amount > 0 {
+		baseQuantity := 100.0
+		if unit != "gram" && unit != "" {
+			baseQuantity = 1.0
+		}
+
+		factor := baseQuantity / amount
 		cacheEntry := models.ReferenceFood{
-			Name:         parsed.Name,
-			BaseQuantity: 100,
-			Unit:         parsed.Unit,
+			Name:         name,
+			BaseQuantity: baseQuantity,
+			Unit:         unit,
 			Macros: models.Macros{
-				Calories: caloriesPer100,
-				Protein:  proteinPer100,
-				Carbs:    carbsPer100,
-				Fat:      fatPer100,
+				Calories: preview.Calories * factor,
+				Protein:  preview.Protein * factor,
+				Carbs:    preview.Carbs * factor,
+				Fat:      preview.Fat * factor,
 			},
 		}
 		s.db.CacheFood(cacheEntry)
