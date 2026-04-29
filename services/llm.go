@@ -19,6 +19,17 @@ type LLMService struct {
 	client *http.Client
 }
 
+type ParsedFoodItemsResponse struct {
+	Items []ParsedFoodItem `json:"items"`
+}
+
+type ParsedFoodItem struct {
+	Name       string  `json:"name"`
+	Amount     float64 `json:"amount"`
+	Unit       string  `json:"unit"`
+	Confidence float64 `json:"confidence"`
+}
+
 // NewLLMService creates a new LLMService with default HTTP client
 func NewLLMService(cfg *config.Config) *LLMService {
 	return &LLMService{
@@ -63,8 +74,9 @@ Rules:
 1. "base_quantity" should usually be 100 for grams/ml or 1 for units.
 2. "unit" should be "g", "ml", or "unit".
 3. "macros" are for the "base_quantity".
-4. If multiple items are mentioned, return values for the main item.
-5. NO prose, NO markdown blocks, only the raw JSON.`, description)
+4. If multiple items are mentioned, return estimated macros for the entire described meal, using "base_quantity": 1 and "unit": "unit".
+5. If the description uses "u", "unit", "units", "unid", "unidade", or "unidades", treat it as a whole item and return "base_quantity": 1 and "unit": "unit".
+6. NO prose, NO markdown blocks, only the raw JSON.`, description)
 
 	var content string
 	var err error
@@ -89,6 +101,58 @@ Rules:
 	}
 
 	return &result, nil
+}
+
+func (s *LLMService) ParseFoodItems(description string) ([]ParsedFood, error) {
+	prompt := fmt.Sprintf(`Extract food items from this meal description.
+Description: %s
+
+Return ONLY strict JSON with this exact shape:
+{
+  "items": [
+    {
+      "name": "normalized food name in the user's language when possible",
+      "amount": number,
+      "unit": "gram|ml|unit|cup|tablespoon|teaspoon|bowl|plate|serving|slice|handful",
+      "confidence": number
+    }
+  ]
+}
+
+Rules:
+1. Extract every food item, including oils, sauces, and sides.
+2. Use "unit" when the user says eggs, bananas, slices as countable items.
+3. Use amount 1 for vague singular portions like "um prato", "uma tigela", or "a bowl".
+4. Do not return calories or macros.
+5. NO prose, NO markdown blocks, only raw JSON.`, description)
+
+	content, err := s.Call(s.config.FoodModel, prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonStr := s.extractJSON(content)
+	var result ParsedFoodItemsResponse
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return nil, nil
+	}
+
+	parser := NewFoodParser()
+	items := make([]ParsedFood, 0, len(result.Items))
+	for _, item := range result.Items {
+		name := parser.normalizeName(item.Name)
+		if name == "" {
+			continue
+		}
+		unit := parser.normalizeUnit(item.Unit)
+		items = append(items, ParsedFood{
+			Amount: item.Amount,
+			Unit:   unit,
+			Name:   name,
+		})
+	}
+
+	return items, nil
 }
 
 // AnalyzeReview implements ReviewAnalyzer interface
