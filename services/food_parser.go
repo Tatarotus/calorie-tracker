@@ -25,7 +25,9 @@ type ParsedFood struct {
 
 // Regex to capture [amount][unit] [name]
 // Requires whitespace before the name to avoid matching "100g" as amount+unit
-var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(tablespoons|tablespoon|teaspoons|teaspoon|ounces|ounce|pounds|pound|liters|liter|grams|gram|cups|cup|ml|gr|g|unidades|unidade|unids|unid|u)?\s+(.+)$`)
+var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(tablespoons|tablespoon|teaspoons|teaspoon|ounces|ounce|pounds|pound|liters|liter|grams|gram|cups|cup|bowls|bowl|plates|plate|servings|serving|slices|slice|handfuls|handful|ml|gr|g|unidades|unidade|units|unit|unids|unid|u)?\s+(.+)$`)
+
+var mealSplitter = regexp.MustCompile(`\s*(?:,|;|\+|\s+(?:and|with|e|com)\s+)\s*`)
 
 func (p *FoodParser) removeAccents(s string) string {
 	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
@@ -35,9 +37,14 @@ func (p *FoodParser) removeAccents(s string) string {
 
 func (p *FoodParser) Parse(desc string) ParsedFood {
 	desc = strings.ToLower(strings.TrimSpace(desc))
+	desc = p.normalizeLeadingNumberWord(desc)
 	// Pre-normalize: remove some common words that might confuse the regex
 	desc = strings.TrimPrefix(desc, "cerca de ")
 	desc = strings.TrimPrefix(desc, "aproximadamente ")
+	desc = strings.TrimPrefix(desc, "i had ")
+	desc = strings.TrimPrefix(desc, "i ate ")
+	desc = strings.TrimPrefix(desc, "eu comi ")
+	desc = strings.TrimPrefix(desc, "comi ")
 
 	matches := foodRegex.FindStringSubmatch(desc)
 	if len(matches) < 3 {
@@ -75,6 +82,36 @@ func (p *FoodParser) Parse(desc string) ParsedFood {
 	}
 }
 
+func (p *FoodParser) ParseMeal(desc string) []ParsedFood {
+	desc = strings.ToLower(strings.TrimSpace(desc))
+	desc = strings.TrimPrefix(desc, "i had ")
+	desc = strings.TrimPrefix(desc, "i ate ")
+	desc = strings.TrimPrefix(desc, "eu comi ")
+	desc = strings.TrimPrefix(desc, "comi ")
+
+	parts := mealSplitter.Split(desc, -1)
+	foods := make([]ParsedFood, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		parsed := p.Parse(part)
+		if parsed.Name != "" {
+			foods = append(foods, parsed)
+		}
+	}
+
+	if len(foods) == 0 {
+		parsed := p.Parse(desc)
+		if parsed.Name != "" {
+			foods = append(foods, parsed)
+		}
+	}
+
+	return foods
+}
+
 func (p *FoodParser) normalizeUnit(unit string) string {
 	unit = p.removeAccents(strings.ToLower(strings.TrimSpace(unit)))
 
@@ -93,7 +130,17 @@ func (p *FoodParser) normalizeUnit(unit string) string {
 		return "pound"
 	case "liters":
 		return "liter"
-	case "unidades", "unids", "unid", "u":
+	case "bowls":
+		return "bowl"
+	case "plates":
+		return "plate"
+	case "servings":
+		return "serving"
+	case "slices":
+		return "slice"
+	case "handfuls":
+		return "handful"
+	case "unidades", "unidade", "units", "unit", "unids", "unid", "u":
 		return "unit"
 	default:
 		return unit
@@ -104,7 +151,7 @@ func (p *FoodParser) normalizeName(name string) string {
 	name = p.removeAccents(strings.ToLower(strings.TrimSpace(name)))
 
 	// Remove common filler words
-	fillerWords := []string{"of", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "de"}
+	fillerWords := []string{"of", "the", "a", "an", "some", "and", "or", "but", "in", "on", "at", "to", "for", "de", "da", "do"}
 	words := strings.Fields(name)
 	var filtered []string
 	for _, word := range words {
@@ -120,5 +167,46 @@ func (p *FoodParser) normalizeName(name string) string {
 		}
 	}
 
-	return strings.Join(filtered, " ")
+	return singularizeName(strings.Join(filtered, " "))
+}
+
+func (p *FoodParser) normalizeLeadingNumberWord(desc string) string {
+	words := strings.Fields(desc)
+	if len(words) == 0 {
+		return desc
+	}
+
+	numberWords := map[string]string{
+		"one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+		"a": "1", "an": "1",
+		"um": "1", "uma": "1", "dois": "2", "duas": "2", "tres": "3", "três": "3",
+	}
+	if value, ok := numberWords[words[0]]; ok {
+		words[0] = value
+		return strings.Join(words, " ")
+	}
+
+	return desc
+}
+
+func singularizeName(name string) string {
+	replacements := map[string]string{
+		"eggs":     "egg",
+		"ovos":     "ovo",
+		"bananas":  "banana",
+		"slices":   "slice",
+		"fatias":   "fatia",
+		"tomatoes": "tomato",
+		"potatoes": "potato",
+		"macas":    "maca",
+		"apples":   "apple",
+	}
+
+	words := strings.Fields(name)
+	for i, word := range words {
+		if replacement, ok := replacements[word]; ok {
+			words[i] = replacement
+		}
+	}
+	return strings.Join(words, " ")
 }

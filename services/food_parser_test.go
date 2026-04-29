@@ -87,6 +87,21 @@ func TestFoodParserNormalizeUnit(t *testing.T) {
 			expected: "gram",
 		},
 		{
+			name:     "unit",
+			input:    "unit",
+			expected: "unit",
+		},
+		{
+			name:     "units",
+			input:    "units",
+			expected: "unit",
+		},
+		{
+			name:     "unidade",
+			input:    "unidade",
+			expected: "unit",
+		},
+		{
 			name:     "ounce",
 			input:    "ounce",
 			expected: "ounce",
@@ -133,6 +148,9 @@ func TestFoodParserParse(t *testing.T) {
 		{"1.5 cups milk", ParsedFood{Amount: 1.5, Unit: "cup", Name: "milk"}},
 		{"apple", ParsedFood{Amount: 0, Unit: "", Name: "apple"}},
 		{"100g arroz", ParsedFood{Amount: 100, Unit: "gram", Name: "arroz"}},
+		{"1u pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
+		{"1unit pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
+		{"1unidade de pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
 		{"2 unidades de ovo", ParsedFood{Amount: 2, Unit: "unit", Name: "ovo"}},
 	}
 
@@ -146,6 +164,27 @@ func TestFoodParserParse(t *testing.T) {
 		}
 		if result.Name != tc.expected.Name {
 			t.Errorf("Parse(%q) name = %q, want %q", tc.input, result.Name, tc.expected.Name)
+		}
+	}
+}
+
+func TestFoodParserParseMeal(t *testing.T) {
+	p := NewFoodParser()
+
+	got := p.ParseMeal("I had two eggs and a bowl of rice with 1 tablespoon olive oil")
+	if len(got) != 3 {
+		t.Fatalf("expected 3 parsed items, got %d: %#v", len(got), got)
+	}
+
+	expected := []ParsedFood{
+		{Amount: 2, Unit: "", Name: "egg"},
+		{Amount: 1, Unit: "bowl", Name: "rice"},
+		{Amount: 1, Unit: "tablespoon", Name: "olive oil"},
+	}
+
+	for i := range expected {
+		if got[i] != expected[i] {
+			t.Errorf("item %d = %#v, want %#v", i, got[i], expected[i])
 		}
 	}
 }

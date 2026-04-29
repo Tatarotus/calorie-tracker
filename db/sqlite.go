@@ -207,9 +207,19 @@ func (db *DB) tableNeedsMigration(tableName string, requiredColumns []string) (b
 func (db *DB) seedReferenceFoods() error {
 	foods := []models.ReferenceFood{
 		{Name: "arroz branco", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3}},
+		{Name: "white rice", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3}},
 		{Name: "frango grelhado", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6}},
+		{Name: "grilled chicken", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6}},
+		{Name: "chicken breast", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 165, Protein: 31, Carbs: 0, Fat: 3.6}},
 		{Name: "ovo", BaseQuantity: 1, Unit: "unit", Macros: models.Macros{Calories: 70, Protein: 6, Carbs: 0.6, Fat: 5}},
+		{Name: "egg", BaseQuantity: 1, Unit: "unit", Macros: models.Macros{Calories: 70, Protein: 6, Carbs: 0.6, Fat: 5}},
 		{Name: "banana", BaseQuantity: 1, Unit: "unit", Macros: models.Macros{Calories: 89, Protein: 1.1, Carbs: 23, Fat: 0.3}},
+		{Name: "olive oil", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 884, Protein: 0, Carbs: 0, Fat: 100}},
+		{Name: "azeite", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 884, Protein: 0, Carbs: 0, Fat: 100}},
+		{Name: "butter", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 717, Protein: 0.9, Carbs: 0.1, Fat: 81}},
+		{Name: "manteiga", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 717, Protein: 0.9, Carbs: 0.1, Fat: 81}},
+		{Name: "bread", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
+		{Name: "pao", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
 	}
 
 	for _, f := range foods {

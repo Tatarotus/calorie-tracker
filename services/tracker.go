@@ -13,10 +13,15 @@ type TrackerService struct {
 }
 
 func NewTrackerService(db db.DBProvider, llm *LLMService) *TrackerService {
+	var provider NutritionProvider
+	if llm != nil {
+		provider = NewFatSecretProviderFromConfig(llm.config)
+	}
+
 	return &TrackerService{
 		db:     db,
 		llm:    llm,
-		engine: NewNutritionEngine(db, llm),
+		engine: NewNutritionEngineWithProvider(db, llm, provider),
 	}
 }
 
@@ -26,25 +31,25 @@ func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, err
 
 func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 	entry := models.FoodEntry{
-		Timestamp:  time.Now(),
+		Timestamp:   time.Now(),
 		Description: preview.Description,
-		Calories:   preview.Calories,
-		Protein:    preview.Protein,
-		Carbs:      preview.Carbs,
-		Fat:        preview.Fat,
+		Calories:    preview.Calories,
+		Protein:     preview.Protein,
+		Carbs:       preview.Carbs,
+		Fat:         preview.Fat,
 	}
-	
+
 	if err := s.db.AddFoodEntry(entry); err != nil {
 		return err
 	}
-	
+
 	parsed := s.engine.parser.Parse(preview.Description)
 	if parsed.Name != "" && parsed.Amount > 0 {
 		caloriesPer100 := (preview.Calories / parsed.Amount) * 100
 		proteinPer100 := (preview.Protein / parsed.Amount) * 100
 		carbsPer100 := (preview.Carbs / parsed.Amount) * 100
 		fatPer100 := (preview.Fat / parsed.Amount) * 100
-		
+
 		cacheEntry := models.ReferenceFood{
 			Name:         parsed.Name,
 			BaseQuantity: 100,
@@ -58,7 +63,7 @@ func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 		}
 		s.db.CacheFood(cacheEntry)
 	}
-	
+
 	return nil
 }
 

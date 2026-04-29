@@ -4,6 +4,7 @@ import (
 	"calorie-tracker/db"
 	"calorie-tracker/models"
 	"fmt"
+	"strings"
 )
 
 // NutritionEngine orchestrates the hybrid nutrition lookup flow
@@ -12,49 +13,144 @@ type NutritionEngine struct {
 	parser     *FoodParser
 	calculator *MacroCalculator
 	llm        *LLMService
+	provider   NutritionProvider
 }
 
 func NewNutritionEngine(db db.DBProvider, llm *LLMService) *NutritionEngine {
+	return NewNutritionEngineWithProvider(db, llm, nil)
+}
+
+func NewNutritionEngineWithProvider(db db.DBProvider, llm *LLMService, provider NutritionProvider) *NutritionEngine {
 	return &NutritionEngine{
 		db:         db,
 		parser:     NewFoodParser(),
 		calculator: NewMacroCalculator(),
 		llm:        llm,
+		provider:   provider,
 	}
 }
 
 func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, error) {
-	// Step 1: Normalize Input
-	parsed := e.parser.Parse(description)
-	if parsed.Name == "" {
+	// Step 1: NLP-lite parsing into one or more structured food items.
+	items := e.parser.ParseMeal(description)
+	if len(items) == 0 {
 		return nil, fmt.Errorf("could not parse food name from: %s", description)
+	}
+
+	preview, ok, err := e.resolveDeterministically(items)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		return preview, nil
+	}
+
+	if e.llm != nil {
+		llmItems, err := e.llm.ParseFoodItems(description)
+		if err != nil {
+			return nil, err
+		}
+		if len(llmItems) > 0 {
+			preview, ok, err := e.resolveDeterministically(llmItems)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				return preview, nil
+			}
+		}
+	}
+
+	if len(items) > 1 {
+		return e.analyzeWholeMealWithLLMFallback(description)
+	}
+
+	return e.analyzeWithLLMFallback(description, items[0])
+}
+
+func (e *NutritionEngine) resolveDeterministically(items []ParsedFood) (*models.FoodPreview, bool, error) {
+	total := models.FoodPreview{}
+	descriptions := make([]string, 0, len(items))
+
+	for _, item := range items {
+		preview, ok, err := e.resolveSingle(item)
+		if err != nil || !ok {
+			return nil, ok, err
+		}
+
+		descriptions = append(descriptions, preview.Description)
+		total.Calories += preview.Calories
+		total.Protein += preview.Protein
+		total.Carbs += preview.Carbs
+		total.Fat += preview.Fat
+	}
+
+	total.Description = strings.Join(descriptions, " + ")
+	return &total, true, nil
+}
+
+func (e *NutritionEngine) resolveSingle(parsed ParsedFood) (*models.FoodPreview, bool, error) {
+	if parsed.Name == "" {
+		return nil, false, nil
 	}
 
 	// Step 2: Check Local Reference Database (Source of Truth)
 	ref, err := e.db.GetReferenceFood(parsed.Name)
 	if err != nil {
-		return nil, fmt.Errorf("reference lookup error: %w", err)
+		return nil, false, fmt.Errorf("reference lookup error: %w", err)
 	}
 
 	if ref != nil {
 		// Step 3: Deterministic Scaling
-		preview := e.calculator.Scale(*ref, parsed.Amount)
-		return &preview, nil
+		if amount, ok := e.scaledAmount(*ref, parsed); ok {
+			preview := e.calculator.Scale(*ref, amount)
+			return &preview, true, nil
+		}
 	}
 
 	// Step 4: Check Cache Layer (Previous LLM results)
 	cached, err := e.db.GetCachedFood(parsed.Name)
 	if err != nil {
-		return nil, fmt.Errorf("cache lookup error: %w", err)
+		return nil, false, fmt.Errorf("cache lookup error: %w", err)
 	}
 
 	if cached != nil {
 		// Scale cached base values to requested amount
-		preview := e.calculator.Scale(*cached, parsed.Amount)
-		return &preview, nil
+		if amount, ok := e.scaledAmount(*cached, parsed); ok {
+			preview := e.calculator.Scale(*cached, amount)
+			return &preview, true, nil
+		}
 	}
 
+	if e.provider != nil {
+		ref, err := e.provider.ResolveFood(parsed)
+		if err != nil {
+			return nil, false, fmt.Errorf("nutrition provider lookup error: %w", err)
+		}
+		if ref != nil {
+			ref.Name = parsed.Name
+			if err := e.validateMacros(ref.Macros); err != nil {
+				return nil, false, err
+			}
+			if err := e.db.CacheFood(*ref); err != nil {
+				fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
+			}
+			if amount, ok := e.scaledAmount(*ref, parsed); ok {
+				preview := e.calculator.Scale(*ref, amount)
+				return &preview, true, nil
+			}
+		}
+	}
+
+	return nil, false, nil
+}
+
+func (e *NutritionEngine) analyzeWithLLMFallback(description string, parsed ParsedFood) (*models.FoodPreview, error) {
 	// Step 5: LLM Fallback (Only if missing everywhere)
+	if e.llm == nil {
+		return nil, fmt.Errorf("no compatible nutrition data found for %q with unit %q", parsed.Name, parsed.Unit)
+	}
+
 	llmRef, err := e.llm.ParseFood(description)
 	if err != nil {
 		return nil, err
@@ -67,7 +163,7 @@ func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, erro
 
 	// Store result in cache for future use
 	// Ensure the cache entry name matches the normalized parsed name
-	llmRef.Name = parsed.Name 
+	llmRef.Name = parsed.Name
 	if err := e.db.CacheFood(*llmRef); err != nil {
 		// Log error but don't fail the request
 		fmt.Printf("Warning: failed to cache LLM result: %v\n", err)
@@ -76,6 +172,130 @@ func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, erro
 	// Scale to requested amount
 	preview := e.calculator.Scale(*llmRef, parsed.Amount)
 	return &preview, nil
+}
+
+func (e *NutritionEngine) analyzeWholeMealWithLLMFallback(description string) (*models.FoodPreview, error) {
+	if e.llm == nil {
+		return nil, fmt.Errorf("could not resolve every food item without LLM: %s", description)
+	}
+
+	llmRef, err := e.llm.ParseFood(description)
+	if err != nil {
+		return nil, err
+	}
+	if err := e.validateMacros(llmRef.Macros); err != nil {
+		return nil, err
+	}
+
+	llmRef.Name = e.parser.normalizeName(description)
+	llmRef.BaseQuantity = 1
+	llmRef.Unit = "unit"
+	if err := e.db.CacheFood(*llmRef); err != nil {
+		fmt.Printf("Warning: failed to cache LLM result: %v\n", err)
+	}
+
+	preview := e.calculator.Scale(*llmRef, 1)
+	preview.Description = llmRef.Name
+	return &preview, nil
+}
+
+func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFood) (float64, bool) {
+	if parsed.Amount <= 0 {
+		return ref.BaseQuantity, true
+	}
+
+	if parsed.Unit == "" {
+		return parsed.Amount, true
+	}
+
+	if e.parser.normalizeUnit(ref.Unit) == parsed.Unit {
+		return parsed.Amount, true
+	}
+
+	if e.parser.normalizeUnit(ref.Unit) == "gram" {
+		grams := e.estimateGrams(parsed)
+		return grams, grams > 0
+	}
+
+	return 0, false
+}
+
+func (e *NutritionEngine) estimateGrams(parsed ParsedFood) float64 {
+	amount := parsed.Amount
+	if amount <= 0 {
+		amount = 1
+	}
+
+	switch parsed.Unit {
+	case "tablespoon":
+		return amount * e.gramsPerTablespoon(parsed.Name)
+	case "teaspoon":
+		return amount * e.gramsPerTeaspoon(parsed.Name)
+	case "cup":
+		return amount * e.gramsPerCup(parsed.Name)
+	case "bowl":
+		return amount * e.gramsPerBowl(parsed.Name)
+	case "plate":
+		return amount * 350
+	case "serving":
+		return amount * 100
+	case "slice":
+		return amount * e.gramsPerSlice(parsed.Name)
+	case "handful":
+		return amount * 28
+	default:
+		return 0
+	}
+}
+
+func (e *NutritionEngine) gramsPerTablespoon(name string) float64 {
+	if containsAny(name, "oil", "azeite") {
+		return 13.5
+	}
+	if containsAny(name, "butter", "manteiga") {
+		return 14.2
+	}
+	return 15
+}
+
+func (e *NutritionEngine) gramsPerTeaspoon(name string) float64 {
+	if containsAny(name, "oil", "azeite") {
+		return 4.5
+	}
+	return 5
+}
+
+func (e *NutritionEngine) gramsPerCup(name string) float64 {
+	if containsAny(name, "rice", "arroz") {
+		return 158
+	}
+	if containsAny(name, "milk", "leite") {
+		return 244
+	}
+	return 240
+}
+
+func (e *NutritionEngine) gramsPerBowl(name string) float64 {
+	if containsAny(name, "rice", "arroz") {
+		return 180
+	}
+	return 250
+}
+
+func (e *NutritionEngine) gramsPerSlice(name string) float64 {
+	if containsAny(name, "bread", "pao") {
+		return 32
+	}
+	return 30
+}
+
+func containsAny(value string, terms ...string) bool {
+	for _, term := range terms {
+		if strings.Contains(value, term) {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *NutritionEngine) validateMacros(m models.Macros) error {
