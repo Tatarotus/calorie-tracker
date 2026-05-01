@@ -31,6 +31,10 @@ func NewTestDB(dbPath string) (*DB, error) {
 		return nil, err
 	}
 
+	if dbPath == ":memory:" {
+		conn.SetMaxOpenConns(1)
+	}
+
 	db := &DB{conn: conn}
 	if err := db.migrate(); err != nil {
 		return nil, err

@@ -262,46 +262,7 @@ func TestFatSecretProviderResolveFood(t *testing.T) {
 	defer tokenServer.Close()
 
 	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer test-token" {
-			t.Errorf("unexpected authorization header %q", r.Header.Get("Authorization"))
-		}
-		if err := r.ParseForm(); err != nil {
-			t.Fatal(err)
-		}
-		values := url.Values{}
-		for key, value := range r.Form {
-			values[key] = append([]string(nil), value...)
-		}
-		apiCalls = append(apiCalls, values)
-
-		switch r.Form.Get("method") {
-		case "foods.search":
-			writeJSON(t, w, map[string]any{
-				"foods": map[string]any{
-					"food": map[string]string{"food_id": "123"},
-				},
-			})
-		case "food.get.v2":
-			writeJSON(t, w, map[string]any{
-				"food": map[string]any{
-					"food_id":   "123",
-					"food_name": "Feijao Carioca",
-					"servings": map[string]any{
-						"serving": map[string]string{
-							"metric_serving_amount": "100.000",
-							"metric_serving_unit":   "g",
-							"calories":              "76",
-							"protein":               "4.8",
-							"carbohydrate":          "13.6",
-							"fat":                   "0.5",
-							"is_default":            "1",
-						},
-					},
-				},
-			})
-		default:
-			t.Fatalf("unexpected method %q", r.Form.Get("method"))
-		}
+		handleFatSecretAPI(t, w, r, &apiCalls)
 	}))
 	defer apiServer.Close()
 
@@ -343,5 +304,49 @@ func writeJSON(t *testing.T, w http.ResponseWriter, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(value); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func handleFatSecretAPI(t *testing.T, w http.ResponseWriter, r *http.Request, apiCalls *[]url.Values) {
+	t.Helper()
+	if r.Header.Get("Authorization") != "Bearer test-token" {
+		t.Errorf("unexpected authorization header %q", r.Header.Get("Authorization"))
+	}
+	if err := r.ParseForm(); err != nil {
+		t.Fatal(err)
+	}
+	values := url.Values{}
+	for key, value := range r.Form {
+		values[key] = append([]string(nil), value...)
+	}
+	*apiCalls = append(*apiCalls, values)
+
+	switch r.Form.Get("method") {
+	case "foods.search":
+		writeJSON(t, w, map[string]any{
+			"foods": map[string]any{
+				"food": map[string]string{"food_id": "123"},
+			},
+		})
+	case "food.get.v2":
+		writeJSON(t, w, map[string]any{
+			"food": map[string]any{
+				"food_id":   "123",
+				"food_name": "Feijao Carioca",
+				"servings": map[string]any{
+					"serving": map[string]string{
+						"metric_serving_amount": "100.000",
+						"metric_serving_unit":   "g",
+						"calories":              "76",
+						"protein":               "4.8",
+						"carbohydrate":          "13.6",
+						"fat":                   "0.5",
+						"is_default":            "1",
+					},
+				},
+			},
+		})
+	default:
+		t.Fatalf("unexpected method %q", r.Form.Get("method"))
 	}
 }
