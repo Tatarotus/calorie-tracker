@@ -1,11 +1,35 @@
 package services
 
 import (
+	"calorie-tracker/data"
 	"calorie-tracker/db"
 	"calorie-tracker/models"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
+
+type ConversionOverride struct {
+	Terms []string `json:"terms"`
+	Value float64  `json:"value"`
+}
+
+type UnitRule struct {
+	Default   float64              `json:"default"`
+	Overrides []ConversionOverride `json:"overrides"`
+}
+
+type RulesData struct {
+	Units map[string]UnitRule `json:"units"`
+}
+
+var globalRules RulesData
+
+func init() {
+	if err := json.Unmarshal(data.RulesJSON, &globalRules); err != nil {
+		panic(fmt.Sprintf("failed to parse rules.json: %v", err))
+	}
+}
 
 // NutritionEngine orchestrates the hybrid nutrition lookup flow
 type NutritionEngine struct {
@@ -260,82 +284,17 @@ func (e *NutritionEngine) estimateGrams(parsed ParsedFood) float64 {
 		amount = 1
 	}
 
-	switch parsed.Unit {
-	case "tablespoon":
-		return amount * e.gramsPerTablespoon(parsed.Name)
-	case "teaspoon":
-		return amount * e.gramsPerTeaspoon(parsed.Name)
-	case "cup":
-		return amount * e.gramsPerCup(parsed.Name)
-	case "bowl":
-		return amount * e.gramsPerBowl(parsed.Name)
-	case "plate":
-		return amount * 350
-	case "serving":
-		return amount * 100
-	case "slice":
-		return amount * e.gramsPerSlice(parsed.Name)
-	case "unit":
-		return amount * e.gramsPerUnit(parsed.Name)
-	case "handful":
-		return amount * 28
-	default:
+	rule, ok := globalRules.Units[parsed.Unit]
+	if !ok {
 		return 0
 	}
-}
 
-func (e *NutritionEngine) gramsPerUnit(name string) float64 {
-	if containsAny(name, "bread", "pao") {
-		return e.gramsPerSlice(name)
+	for _, override := range rule.Overrides {
+		if containsAny(parsed.Name, override.Terms...) {
+			return amount * override.Value
+		}
 	}
-	if containsAny(name, "egg", "ovo") {
-		return 50
-	}
-	if containsAny(name, "apple", "maca") {
-		return 180
-	}
-	return 100
-}
-
-func (e *NutritionEngine) gramsPerTablespoon(name string) float64 {
-	if containsAny(name, "oil", "azeite") {
-		return 13.5
-	}
-	if containsAny(name, "butter", "manteiga") {
-		return 14.2
-	}
-	return 15
-}
-
-func (e *NutritionEngine) gramsPerTeaspoon(name string) float64 {
-	if containsAny(name, "oil", "azeite") {
-		return 4.5
-	}
-	return 5
-}
-
-func (e *NutritionEngine) gramsPerCup(name string) float64 {
-	if containsAny(name, "rice", "arroz") {
-		return 158
-	}
-	if containsAny(name, "milk", "leite") {
-		return 244
-	}
-	return 240
-}
-
-func (e *NutritionEngine) gramsPerBowl(name string) float64 {
-	if containsAny(name, "rice", "arroz") {
-		return 180
-	}
-	return 250
-}
-
-func (e *NutritionEngine) gramsPerSlice(name string) float64 {
-	if containsAny(name, "bread", "pao") {
-		return 32
-	}
-	return 30
+	return amount * rule.Default
 }
 
 func containsAny(value string, terms ...string) bool {

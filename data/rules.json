@@ -1,0 +1,56 @@
+{
+  "units": {
+    "tablespoon": {
+      "default": 15,
+      "overrides": [
+        { "terms": ["oil", "azeite"], "value": 13.5 },
+        { "terms": ["butter", "manteiga"], "value": 14.2 }
+      ]
+    },
+    "teaspoon": {
+      "default": 5,
+      "overrides": [
+        { "terms": ["oil", "azeite"], "value": 4.5 }
+      ]
+    },
+    "cup": {
+      "default": 240,
+      "overrides": [
+        { "terms": ["rice", "arroz"], "value": 158 },
+        { "terms": ["milk", "leite"], "value": 244 }
+      ]
+    },
+    "bowl": {
+      "default": 250,
+      "overrides": [
+        { "terms": ["rice", "arroz"], "value": 180 }
+      ]
+    },
+    "slice": {
+      "default": 30,
+      "overrides": [
+        { "terms": ["bread", "pao"], "value": 32 }
+      ]
+    },
+    "unit": {
+      "default": 100,
+      "overrides": [
+        { "terms": ["bread", "pao"], "value": 32 },
+        { "terms": ["egg", "ovo"], "value": 50 },
+        { "terms": ["apple", "maca"], "value": 180 }
+      ]
+    },
+    "handful": {
+      "default": 28,
+      "overrides": []
+    },
+    "plate": {
+      "default": 350,
+      "overrides": []
+    },
+    "serving": {
+      "default": 100,
+      "overrides": []
+    }
+  }
+}
