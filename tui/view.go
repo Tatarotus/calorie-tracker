@@ -27,8 +27,6 @@ func (m Model) View() string {
 			msg = "🎯 Setting your goal..."
 		}
 		content = msg
-	} else if m.Error != nil {
-		content = StyleError.Render(fmt.Sprintf("Error: %v", m.Error))
 	} else {
 		switch m.Mode {
 		case DashboardView:
@@ -51,6 +49,11 @@ func (m Model) View() string {
 			content = m.editFoodPreviewView()
 		case SetGoalView:
 			content = m.setGoalView()
+		}
+
+		if m.Error != nil {
+			errStr := StyleError.Render(fmt.Sprintf("⚠️ Error: %v", m.Error))
+			content = content + "\n\n" + errStr
 		}
 	}
 
@@ -314,7 +317,7 @@ func (m Model) helpView() string {
 	case EditFoodPreviewView:
 		help = "enter: next/save • esc: cancel • q: quit"
 	case AddFoodView, AddWaterView, SetGoalView:
-		help = "enter: submit • esc: back • q: quit"
+		help = "enter: submit • ctrl+m: manual • esc: back • q: quit"
 	case ReviewView, TodayLogView, WeekLogView, MonthLogView:
 		help = "↑/↓: scroll • d: dashboard • t: today\n7: week • m: month • q: quit"
 	default:

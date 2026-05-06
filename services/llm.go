@@ -82,8 +82,11 @@ Rules:
 	var err error
 	for i := 0; i < 3; i++ {
 		content, err = s.Call(s.config.FoodModel, prompt)
-		if err == nil {
+		if err == nil && content != "" {
 			break
+		}
+		if err == nil && content == "" {
+			err = fmt.Errorf("empty response from LLM")
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -126,7 +129,19 @@ Rules:
 4. Do not return calories or macros.
 5. NO prose, NO markdown blocks, only raw JSON.`, description)
 
-	content, err := s.Call(s.config.FoodModel, prompt)
+	var content string
+	var err error
+	for i := 0; i < 3; i++ {
+		content, err = s.Call(s.config.FoodModel, prompt)
+		if err == nil && content != "" {
+			break
+		}
+		if err == nil && content == "" {
+			err = fmt.Errorf("empty response from LLM")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +149,7 @@ Rules:
 	jsonStr := s.extractJSON(content)
 	var result ParsedFoodItemsResponse
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, nil
+		return nil, fmt.Errorf("failed to parse LLM response: %w, content: %s", err, content)
 	}
 
 	parser := NewFoodParser()
@@ -164,8 +179,11 @@ func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult
 	var err error
 	for i := 0; i < 3; i++ {
 		content, err = s.Call(s.config.ReviewModel, prompt)
-		if err == nil {
+		if err == nil && content != "" {
 			break
+		}
+		if err == nil && content == "" {
+			err = fmt.Errorf("empty response from LLM")
 		}
 		time.Sleep(1 * time.Second)
 	}

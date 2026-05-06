@@ -34,7 +34,7 @@ func NewFatSecretProviderFromConfig(cfg *config.Config) *FatSecretProvider {
 	}
 
 	return &FatSecretProvider{
-		client:          &http.Client{Timeout: 20 * time.Second},
+		client:          &http.Client{Timeout: 10 * time.Second},
 		clientID:        cfg.FatSecretClientID,
 		clientSecret:    cfg.FatSecretClientSecret,
 		scope:           cfg.FatSecretScope,

@@ -21,7 +21,7 @@ func NewSerpAPIProvider(apiKey string) *SerpAPIProvider {
 		return nil
 	}
 	return &SerpAPIProvider{
-		client: &http.Client{Timeout: 15 * time.Second},
+		client: &http.Client{Timeout: 7 * time.Second},
 		apiKey: apiKey,
 	}
 }

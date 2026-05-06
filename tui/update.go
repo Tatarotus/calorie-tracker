@@ -160,6 +160,19 @@ func (m Model) handleInputModeKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case "esc":
 		m.Mode = DashboardView
 		return m, m.getStatsCmd()
+	case "ctrl+m":
+		if m.Mode == AddFoodView {
+			m.PendingFood = &models.FoodPreview{
+				Description: m.FoodInput.Value(),
+				Calories:    0,
+				Protein:     0,
+				Carbs:       0,
+				Fat:         0,
+			}
+			m.Mode = ConfirmFoodView
+			m.Error = nil
+			return m, noOpCmd()
+		}
 	case "enter":
 		return m.handleInputModeEnter()
 	}
@@ -278,6 +291,12 @@ func noOpCmd() tea.Cmd {
 func (m Model) updateInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+
+	if _, ok := msg.(tea.KeyMsg); ok {
+		if m.Error != nil {
+			m.Error = nil
+		}
+	}
 
 	switch m.Mode {
 	case AddFoodView:
