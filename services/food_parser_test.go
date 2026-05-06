@@ -153,8 +153,9 @@ func TestFoodParserParse(t *testing.T) {
 		{"1unidade de pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
 		{"2 unidades de ovo", ParsedFood{Amount: 2, Unit: "unit", Name: "ovo"}},
 		{"1u unit pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
-		{"pão com manteiga", ParsedFood{Amount: 0, Unit: "", Name: "pao manteiga"}},
-		{"arroz e feijão", ParsedFood{Amount: 0, Unit: "", Name: "arroz feijao"}},
+		{"pão com manteiga", ParsedFood{Amount: 0, Unit: "", Name: "pao com manteiga"}},
+		{"pão de mel", ParsedFood{Amount: 0, Unit: "", Name: "pao de mel"}},
+		{"arroz e feijão", ParsedFood{Amount: 0, Unit: "", Name: "arroz e feijao"}},
 	}
 
 	for _, tc := range testCases {

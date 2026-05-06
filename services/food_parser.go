@@ -150,9 +150,9 @@ func (p *FoodParser) normalizeUnit(unit string) string {
 func (p *FoodParser) normalizeName(name string) string {
 	name = p.removeAccents(strings.ToLower(strings.TrimSpace(name)))
 
-	// Remove common filler words and units that might be returned in the name
+	// Remove common filler words that are NOT part of a food name.
 	fillerWords := []string{
-		"of", "the", "a", "an", "some", "and", "or", "but", "in", "on", "at", "to", "for", "de", "da", "do", "com", "e",
+		"of", "the", "a", "an", "some", "and", "or", "but", "in", "on", "at", "to", "for",
 		"unit", "units", "unidade", "unidades", "unid", "u", "un",
 		"gram", "grams", "grama", "gramas", "g",
 		"milliliter", "milliliters", "ml",
@@ -172,6 +172,35 @@ func (p *FoodParser) normalizeName(name string) string {
 		}
 		if !isFiller {
 			filtered = append(filtered, word)
+		}
+	}
+
+	// Trim leading and trailing connective words
+	connectives := []string{"de", "da", "do", "com", "e"}
+	for {
+		changed := false
+		if len(filtered) > 0 {
+			first := filtered[0]
+			for _, conn := range connectives {
+				if first == conn {
+					filtered = filtered[1:]
+					changed = true
+					break
+				}
+			}
+		}
+		if len(filtered) > 0 {
+			last := filtered[len(filtered)-1]
+			for _, conn := range connectives {
+				if last == conn {
+					filtered = filtered[:len(filtered)-1]
+					changed = true
+					break
+				}
+			}
+		}
+		if !changed {
+			break
 		}
 	}
 

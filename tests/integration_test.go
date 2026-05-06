@@ -8,12 +8,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 )
 
 // TestFullFoodTrackingFlow tests the end-to-end flow of tracking food
 func TestFullFoodTrackingFlow(t *testing.T) {
+	// Temporarily clear API keys to avoid real network calls
+	os.Setenv("SERPAPI_KEY", "")
+	os.Setenv("FATSECRET_CLIENT_ID", "")
+	defer func() {
+		// No need to restore since tests run in isolation, but good practice
+	}()
+
 	// Step 1: Setup
 	testDB, err := db.NewTestDB(":memory:")
 	if err != nil {
