@@ -25,7 +25,7 @@ type ParsedFood struct {
 
 // Regex to capture [amount][unit] [name]
 // Requires whitespace before the name to avoid matching "100g" as amount+unit
-var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(tablespoons|tablespoon|teaspoons|teaspoon|ounces|ounce|pounds|pound|liters|liter|grams|gram|cups|cup|bowls|bowl|plates|plate|servings|serving|slices|slice|handfuls|handful|ml|gr|g|unidades|unidade|units|unit|unids|unid|u)?\s+(.+)$`)
+var foodRegex = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s*(tablespoons|tablespoon|teaspoons|teaspoon|ounces|ounce|pounds|pound|liters|liter|grams|gram|cups|cup|bowls|bowl|plates|plate|servings|serving|slices|slice|handfuls|handful|ml|gr|g|unidades|unidade|units|unit|unids|unid|u|un)?\s+(.+)$`)
 
 var mealSplitter = regexp.MustCompile(`\s*(?:,|;|\+|\s+(?:and|with|e|com)\s+)\s*`)
 
@@ -140,7 +140,7 @@ func (p *FoodParser) normalizeUnit(unit string) string {
 		return "slice"
 	case "handfuls":
 		return "handful"
-	case "unidades", "unidade", "units", "unit", "unids", "unid", "u":
+	case "unidades", "unidade", "units", "unit", "unids", "unid", "u", "un":
 		return "unit"
 	default:
 		return unit
@@ -150,8 +150,16 @@ func (p *FoodParser) normalizeUnit(unit string) string {
 func (p *FoodParser) normalizeName(name string) string {
 	name = p.removeAccents(strings.ToLower(strings.TrimSpace(name)))
 
-	// Remove common filler words
-	fillerWords := []string{"of", "the", "a", "an", "some", "and", "or", "but", "in", "on", "at", "to", "for", "de", "da", "do"}
+	// Remove common filler words and units that might be returned in the name
+	fillerWords := []string{
+		"of", "the", "a", "an", "some", "and", "or", "but", "in", "on", "at", "to", "for", "de", "da", "do", "com", "e",
+		"unit", "units", "unidade", "unidades", "unid", "u", "un",
+		"gram", "grams", "grama", "gramas", "g",
+		"milliliter", "milliliters", "ml",
+		"liter", "liters", "litro", "litros", "l",
+		"ounce", "ounces", "oz",
+		"pound", "pounds", "lb", "lbs",
+	}
 	words := strings.Fields(name)
 	var filtered []string
 	for _, word := range words {

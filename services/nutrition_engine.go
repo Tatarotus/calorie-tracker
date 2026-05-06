@@ -69,6 +69,18 @@ func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, erro
 		return preview, nil
 	}
 
+	// If split into multiple items but couldn't resolve all of them,
+	// try resolving the whole description as a single item before falling back to LLM.
+	if len(items) > 1 {
+		singleItem := e.parser.Parse(description)
+		if singleItem.Name != "" {
+			preview, ok, err := e.resolveSingle(singleItem)
+			if err == nil && ok {
+				return preview, nil
+			}
+		}
+	}
+
 	if e.llm != nil {
 		llmItems, err := e.llm.ParseFoodItems(description)
 		if err != nil {
@@ -267,6 +279,20 @@ func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFo
 	}
 
 	if normRefUnit == parsed.Unit {
+		return parsed.Amount, true
+	}
+
+	// If reference has no unit, we can be more lenient
+	if normRefUnit == "" {
+		// If user asked for 'unit' and ref has no unit, assume it's a unit-based ref
+		if parsed.Unit == "unit" {
+			return parsed.Amount, true
+		}
+		// If user asked for 'gram' and ref has no unit, assume it's gram-based
+		if parsed.Unit == "gram" {
+			return parsed.Amount, true
+		}
+		// Default to whatever amount was parsed
 		return parsed.Amount, true
 	}
 
