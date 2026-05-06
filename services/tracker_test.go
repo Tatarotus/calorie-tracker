@@ -229,7 +229,12 @@ func TestTrackerService_ParseFood_LLMFallback(t *testing.T) {
 		FoodModel:     "test",
 	}
 	llm := NewLLMServiceWithClient(cfg, server.Client())
-	tracker := NewTrackerService(mockDB, llm)
+	// Manually construct TrackerService to avoid loading real providers from environment
+	tracker := &TrackerService{
+		db:     mockDB,
+		llm:    llm,
+		engine: NewNutritionEngineWithProviders(mockDB, llm, nil),
+	}
 
 	preview, err := tracker.ParseFood("banana")
 	if err != nil {

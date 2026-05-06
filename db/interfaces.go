@@ -14,6 +14,7 @@ type DBProvider interface {
 	GetFoodEntriesRange(days int) ([]models.FoodEntry, error)
 	CacheFood(f models.ReferenceFood) error
 	GetCachedFood(name string) (*models.ReferenceFood, error)
+	GetAllCacheEntries() ([]models.ReferenceFood, error)
 	GetReferenceFood(name string) (*models.ReferenceFood, error)
 
 	// Water operations
