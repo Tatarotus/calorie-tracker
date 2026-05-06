@@ -37,20 +37,28 @@ type NutritionEngine struct {
 	parser     *FoodParser
 	calculator *MacroCalculator
 	llm        *LLMService
-	provider   NutritionProvider
+	providers  []NutritionProvider
 }
 
 func NewNutritionEngine(db db.DBProvider, llm *LLMService) *NutritionEngine {
-	return NewNutritionEngineWithProvider(db, llm, nil)
+	return NewNutritionEngineWithProviders(db, llm, nil)
 }
 
 func NewNutritionEngineWithProvider(db db.DBProvider, llm *LLMService, provider NutritionProvider) *NutritionEngine {
+	var providers []NutritionProvider
+	if provider != nil {
+		providers = append(providers, provider)
+	}
+	return NewNutritionEngineWithProviders(db, llm, providers)
+}
+
+func NewNutritionEngineWithProviders(db db.DBProvider, llm *LLMService, providers []NutritionProvider) *NutritionEngine {
 	return &NutritionEngine{
 		db:         db,
 		parser:     NewFoodParser(),
 		calculator: NewMacroCalculator(),
 		llm:        llm,
-		provider:   provider,
+		providers:  providers,
 	}
 }
 
@@ -167,24 +175,28 @@ func (e *NutritionEngine) resolveSingle(parsed ParsedFood) (*models.FoodPreview,
 		}
 	}
 
-	if e.provider != nil {
-		ref, err := e.provider.ResolveFood(parsed)
-		if err != nil {
-			return nil, false, fmt.Errorf("nutrition provider lookup error: %w", err)
-		}
-		if ref != nil {
-			ref.Name = parsed.Name
-			if err := e.validateMacros(ref.Macros); err != nil {
-				return nil, false, err
+	if len(e.providers) > 0 {
+		for _, provider := range e.providers {
+			ref, err := provider.ResolveFood(parsed)
+			if err != nil {
+				fmt.Printf("Warning: nutrition provider lookup error: %v\n", err)
+				continue
 			}
-			if err := e.db.CacheFood(*ref); err != nil {
-				fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
-			}
-			if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
-				preview := e.calculator.Scale(*ref, amount)
-				preview.Name = parsed.Name
-				preview.Unit = parsed.Unit
-				return &preview, true, nil
+			if ref != nil {
+				ref.Name = parsed.Name
+				if err := e.validateMacros(ref.Macros); err != nil {
+					fmt.Printf("Warning: invalid macros from provider: %v\n", err)
+					continue
+				}
+				if err := e.db.CacheFood(*ref); err != nil {
+					fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
+				}
+				if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+					preview := e.calculator.Scale(*ref, amount)
+					preview.Name = parsed.Name
+					preview.Unit = parsed.Unit
+					return &preview, true, nil
+				}
 			}
 		}
 	}

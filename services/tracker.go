@@ -1,8 +1,10 @@
 package services
 
 import (
+	"calorie-tracker/config"
 	"calorie-tracker/db"
 	"calorie-tracker/models"
+	"strings"
 	"time"
 )
 
@@ -13,15 +15,28 @@ type TrackerService struct {
 }
 
 func NewTrackerService(db db.DBProvider, llm *LLMService) *TrackerService {
-	var provider NutritionProvider
-	if llm != nil {
-		provider = NewFatSecretProviderFromConfig(llm.config)
+	cfg := config.Load()
+	priority := strings.Split(cfg.NutritionPriority, ",")
+	providers := make([]NutritionProvider, 0)
+
+	for _, p := range priority {
+		p = strings.TrimSpace(p)
+		switch p {
+		case "fatsecret":
+			if fs := NewFatSecretProviderFromConfig(cfg); fs != nil {
+				providers = append(providers, fs)
+			}
+		case "serpapi":
+			if serp := NewSerpAPIProvider(cfg.SerpAPIKey); serp != nil {
+				providers = append(providers, serp)
+			}
+		}
 	}
 
 	return &TrackerService{
 		db:     db,
 		llm:    llm,
-		engine: NewNutritionEngineWithProvider(db, llm, provider),
+		engine: NewNutritionEngineWithProviders(db, llm, providers),
 	}
 }
 

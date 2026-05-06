@@ -19,6 +19,8 @@ type Config struct {
 	FatSecretUseLocalization bool
 	FatSecretTokenURL        string
 	FatSecretAPIURL          string
+	SerpAPIKey               string
+	NutritionPriority        string // e.g. "serpapi,fatsecret"
 }
 
 func Load() *Config {
@@ -37,6 +39,8 @@ func Load() *Config {
 		FatSecretUseLocalization: getEnv("FATSECRET_USE_LOCALIZATION", "") == "true",
 		FatSecretTokenURL:        getEnv("FATSECRET_TOKEN_URL", "https://oauth.fatsecret.com/connect/token"),
 		FatSecretAPIURL:          getEnv("FATSECRET_API_URL", "https://platform.fatsecret.com/rest/server.api"),
+		SerpAPIKey:               getEnv("SERPAPI_KEY", ""),
+		NutritionPriority:        getEnv("NUTRITION_PRIORITY", "serpapi,fatsecret"),
 	}
 }
 
