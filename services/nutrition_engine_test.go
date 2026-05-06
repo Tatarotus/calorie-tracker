@@ -14,33 +14,33 @@ func TestNutritionEngine_EstimateGrams(t *testing.T) {
 		expected float64
 	}{
 		{
-			name: "default cup",
-			parsed: ParsedFood{Amount: 1, Unit: "cup", Name: "water"},
+			name:     "default cup",
+			parsed:   ParsedFood{Amount: 1, Unit: "cup", Name: "water"},
 			expected: 240,
 		},
 		{
-			name: "cup of rice (override)",
-			parsed: ParsedFood{Amount: 1, Unit: "cup", Name: "arroz branco"},
+			name:     "cup of rice (override)",
+			parsed:   ParsedFood{Amount: 1, Unit: "cup", Name: "arroz branco"},
 			expected: 158,
 		},
 		{
-			name: "tablespoon default",
-			parsed: ParsedFood{Amount: 2, Unit: "tablespoon", Name: "sugar"},
-			expected: 30, // 2 * 15
+			name:     "tablespoon default",
+			parsed:   ParsedFood{Amount: 2, Unit: "tablespoon", Name: "sugar"},
+			expected: 25, // 2 * 12.5 (sugar override)
 		},
 		{
-			name: "tablespoon oil (override)",
-			parsed: ParsedFood{Amount: 2, Unit: "tablespoon", Name: "azeite"},
+			name:     "tablespoon oil (override)",
+			parsed:   ParsedFood{Amount: 2, Unit: "tablespoon", Name: "azeite"},
 			expected: 27, // 2 * 13.5
 		},
 		{
-			name: "unit of egg (override)",
-			parsed: ParsedFood{Amount: 3, Unit: "unit", Name: "ovo"},
+			name:     "unit of egg (override)",
+			parsed:   ParsedFood{Amount: 3, Unit: "unit", Name: "ovo"},
 			expected: 150, // 3 * 50
 		},
 		{
-			name: "unknown unit defaults to 0",
-			parsed: ParsedFood{Amount: 1, Unit: "unknown_unit", Name: "something"},
+			name:     "unknown unit defaults to 0",
+			parsed:   ParsedFood{Amount: 1, Unit: "unknown_unit", Name: "something"},
 			expected: 0,
 		},
 	}

@@ -4,32 +4,51 @@
       "default": 15,
       "overrides": [
         { "terms": ["oil", "azeite"], "value": 13.5 },
-        { "terms": ["butter", "manteiga"], "value": 14.2 }
+        { "terms": ["butter", "manteiga"], "value": 14.2 },
+        { "terms": ["flour", "farinha"], "value": 8.0 },
+        { "terms": ["sugar", "acucar"], "value": 12.5 },
+        { "terms": ["honey", "mel"], "value": 21.0 },
+        { "terms": ["peanut butter", "pasta de amendoim"], "value": 16.0 }
       ]
     },
     "teaspoon": {
       "default": 5,
       "overrides": [
-        { "terms": ["oil", "azeite"], "value": 4.5 }
+        { "terms": ["oil", "azeite"], "value": 4.5 },
+        { "terms": ["sugar", "acucar"], "value": 4.2 },
+        { "terms": ["salt", "sal"], "value": 6.0 },
+        { "terms": ["baking powder", "fermento"], "value": 4.0 }
       ]
     },
     "cup": {
       "default": 240,
       "overrides": [
         { "terms": ["rice", "arroz"], "value": 158 },
-        { "terms": ["milk", "leite"], "value": 244 }
+        { "terms": ["milk", "leite"], "value": 244 },
+        { "terms": ["flour", "farinha"], "value": 120 },
+        { "terms": ["sugar", "acucar"], "value": 200 },
+        { "terms": ["oats", "aveia"], "value": 80 },
+        { "terms": ["yogurt", "iogurte"], "value": 245 },
+        { "terms": ["oil", "azeite"], "value": 218 }
       ]
     },
     "bowl": {
       "default": 250,
       "overrides": [
-        { "terms": ["rice", "arroz"], "value": 180 }
+        { "terms": ["rice", "arroz"], "value": 180 },
+        { "terms": ["soup", "sopa"], "value": 350 },
+        { "terms": ["salad", "salada"], "value": 150 },
+        { "terms": ["cereal", "cereal"], "value": 40 }
       ]
     },
     "slice": {
       "default": 30,
       "overrides": [
-        { "terms": ["bread", "pao"], "value": 32 }
+        { "terms": ["bread", "pao"], "value": 32 },
+        { "terms": ["cheese", "queijo"], "value": 28 },
+        { "terms": ["apple", "maca"], "value": 182 },
+        { "terms": ["tomato", "tomate"], "value": 20 },
+        { "terms": ["cucumber", "pepino"], "value": 15 }
       ]
     },
     "unit": {
@@ -37,20 +56,88 @@
       "overrides": [
         { "terms": ["bread", "pao"], "value": 32 },
         { "terms": ["egg", "ovo"], "value": 50 },
-        { "terms": ["apple", "maca"], "value": 180 }
+        { "terms": ["apple", "maca"], "value": 180 },
+        { "terms": ["banana"], "value": 118 },
+        { "terms": ["orange", "laranja"], "value": 131 },
+        { "terms": ["avocado", "abacate"], "value": 150 },
+        { "terms": ["onion", "cebola"], "value": 110 },
+        { "terms": ["potato", "batata"], "value": 170 },
+        { "terms": ["sweet potato", "batata doce"], "value": 130 },
+        { "terms": ["carrot", "cenoura"], "value": 61 },
+        { "terms": ["tomato", "tomate"], "value": 123 },
+        { "terms": ["lemon", "limao"], "value": 58 }
       ]
     },
     "handful": {
       "default": 28,
-      "overrides": []
+      "overrides": [
+        { "terms": ["nuts", "nozes"], "value": 30 },
+        { "terms": ["grapes", "uvas"], "value": 80 },
+        { "terms": ["berries", "frutas vermelhas"], "value": 40 }
+      ]
     },
     "plate": {
       "default": 350,
-      "overrides": []
+      "overrides": [
+        { "terms": ["pasta", "macarrao"], "value": 280 },
+        { "terms": ["salad", "salada"], "value": 200 },
+        { "terms": ["stew", "ensopado"], "value": 400 }
+      ]
     },
     "serving": {
       "default": 100,
-      "overrides": []
+      "overrides": [
+        { "terms": ["chicken", "frango"], "value": 150 },
+        { "terms": ["beef", "carne"], "value": 120 },
+        { "terms": ["fish", "peixe"], "value": 140 },
+        { "terms": ["pork", "porco"], "value": 130 }
+      ]
+    },
+    "ounce": {
+      "default": 28.35,
+      "overrides": [
+        { "terms": ["cheese", "queijo"], "value": 28.35 },
+        { "terms": ["meat", "carne"], "value": 28.35 },
+        { "terms": ["chocolate"], "value": 28.35 }
+      ]
+    },
+    "pound": {
+      "default": 453.59,
+      "overrides": [
+        { "terms": ["flour", "farinha"], "value": 453.59 },
+        { "terms": ["sugar", "acucar"], "value": 453.59 }
+      ]
+    },
+    "ml": {
+      "default": 1,
+      "overrides": [
+        { "terms": ["milk", "leite"], "value": 1.03 },
+        { "terms": ["oil", "azeite"], "value": 0.92 },
+        { "terms": ["honey", "mel"], "value": 1.42 }
+      ]
+    },
+    "liter": {
+      "default": 1000,
+      "overrides": [
+        { "terms": ["water", "agua"], "value": 1000 },
+        { "terms": ["milk", "leite"], "value": 1030 },
+        { "terms": ["juice", "suco"], "value": 1050 }
+      ]
+    },
+    "pinch": {
+      "default": 0.36,
+      "overrides": [
+        { "terms": ["salt", "sal"], "value": 0.6 },
+        { "terms": ["pepper", "pimenta"], "value": 0.3 },
+        { "terms": ["spices", "especiarias"], "value": 0.4 }
+      ]
+    },
+    "dash": {
+      "default": 0.6,
+      "overrides": [
+        { "terms": ["hot sauce", "pimenta"], "value": 0.5 },
+        { "terms": ["liquid", "liquido"], "value": 0.6 }
+      ]
     }
   }
 }

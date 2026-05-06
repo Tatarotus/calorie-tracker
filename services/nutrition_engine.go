@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 type ConversionOverride struct {
@@ -33,11 +34,14 @@ func init() {
 
 // NutritionEngine orchestrates the hybrid nutrition lookup flow
 type NutritionEngine struct {
-	db         db.DBProvider
-	parser     *FoodParser
-	calculator *MacroCalculator
-	llm        *LLMService
-	providers  []NutritionProvider
+	db            db.DBProvider
+	parser        *FoodParser
+	calculator    *MacroCalculator
+	llm           *LLMService
+	providers     []NutritionProvider
+	fuzzyMatcher  *FuzzyMatcher
+	synonymMapper *SynonymMapper
+	llmCache      *LLMCache
 }
 
 func NewNutritionEngine(db db.DBProvider, llm *LLMService) *NutritionEngine {
@@ -54,11 +58,14 @@ func NewNutritionEngineWithProvider(db db.DBProvider, llm *LLMService, provider 
 
 func NewNutritionEngineWithProviders(db db.DBProvider, llm *LLMService, providers []NutritionProvider) *NutritionEngine {
 	return &NutritionEngine{
-		db:         db,
-		parser:     NewFoodParser(),
-		calculator: NewMacroCalculator(),
-		llm:        llm,
-		providers:  providers,
+		db:            db,
+		parser:        NewFoodParser(),
+		calculator:    NewMacroCalculator(),
+		llm:           llm,
+		providers:     providers,
+		fuzzyMatcher:  NewFuzzyMatcher(0.8),
+		synonymMapper: NewSynonymMapper(),
+		llmCache:      NewLLMCache(24*time.Hour, 1000),
 	}
 }
 
@@ -139,69 +146,199 @@ func (e *NutritionEngine) resolveSingle(parsed ParsedFood) (*models.FoodPreview,
 	}
 
 	// 1. Exact Match Cache (Highest Priority)
+	if preview, ok := e.tryExactCache(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 2. Synonym-based Cache Lookup
+	if preview, ok := e.trySynonymCache(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 3. Fuzzy Cache Lookup
+	if preview, ok := e.tryFuzzyCache(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 4. Exact Match Reference
+	if preview, ok := e.tryExactReference(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 5. Synonym-based Reference Lookup
+	if preview, ok := e.trySynonymReference(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 6. Fuzzy Match Reference
+	if preview, ok := e.tryFuzzyReference(parsed); ok {
+		return preview, true, nil
+	}
+
+	// 7. External Nutrition Providers
+	return e.tryExternalProviders(parsed)
+}
+
+// tryExactCache attempts an exact match from the food cache
+func (e *NutritionEngine) tryExactCache(parsed ParsedFood) (*models.FoodPreview, bool) {
 	cached, err := e.db.GetCachedFood(parsed.Name)
-	if err == nil && cached != nil {
-		// For Cache, we only allow scaling if the units match exactly or ref has no unit.
-		// We DON'T want to estimate grams for a cache hit if they specifically asked for 'unit'.
-		if amount, ok := e.scaledAmount(*cached, parsed, false); ok {
-			preview := e.calculator.Scale(*cached, amount)
-			preview.Name = parsed.Name
-			preview.Unit = parsed.Unit
-			preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
-			return &preview, true, nil
-		}
+	if err != nil || cached == nil {
+		return nil, false
 	}
+	if amount, ok := e.scaledAmount(*cached, parsed, false); ok {
+		preview := e.calculator.Scale(*cached, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+		return &preview, true
+	}
+	return nil, false
+}
 
-	// 2. Exact Match Reference
+// trySynonymCache attempts a synonym-based match from the food cache
+func (e *NutritionEngine) trySynonymCache(parsed ParsedFood) (*models.FoodPreview, bool) {
+	canonicalName := e.synonymMapper.GetCanonical(parsed.Name)
+	if canonicalName == parsed.Name {
+		return nil, false
+	}
+	cached, err := e.db.GetCachedFood(canonicalName)
+	if err != nil || cached == nil {
+		return nil, false
+	}
+	if amount, ok := e.scaledAmount(*cached, parsed, false); ok {
+		preview := e.calculator.Scale(*cached, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+		return &preview, true
+	}
+	return nil, false
+}
+
+// tryFuzzyCache attempts a fuzzy match from the food cache
+func (e *NutritionEngine) tryFuzzyCache(parsed ParsedFood) (*models.FoodPreview, bool) {
+	fuzzyCached, err := e.fuzzyFindInCache(parsed.Name)
+	if err != nil || fuzzyCached == nil {
+		return nil, false
+	}
+	if amount, ok := e.scaledAmount(*fuzzyCached, parsed, false); ok {
+		preview := e.calculator.Scale(*fuzzyCached, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+		return &preview, true
+	}
+	return nil, false
+}
+
+// tryExactReference attempts an exact match from the reference database
+func (e *NutritionEngine) tryExactReference(parsed ParsedFood) (*models.FoodPreview, bool) {
 	ref, err := e.db.GetReferenceFood(parsed.Name)
-	if err == nil && ref != nil && strings.EqualFold(ref.Name, parsed.Name) {
+	if err != nil || ref == nil || !strings.EqualFold(ref.Name, parsed.Name) {
+		return nil, false
+	}
+	if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+		preview := e.calculator.Scale(*ref, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+		return &preview, true
+	}
+	return nil, false
+}
+
+// trySynonymReference attempts a synonym-based match from the reference database
+func (e *NutritionEngine) trySynonymReference(parsed ParsedFood) (*models.FoodPreview, bool) {
+	canonicalName := e.synonymMapper.GetCanonical(parsed.Name)
+	if canonicalName == parsed.Name {
+		return nil, false
+	}
+	ref, err := e.db.GetReferenceFood(canonicalName)
+	if err != nil || ref == nil {
+		return nil, false
+	}
+	if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+		preview := e.calculator.Scale(*ref, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
+		return &preview, true
+	}
+	return nil, false
+}
+
+// tryFuzzyReference attempts a fuzzy match from the reference database
+func (e *NutritionEngine) tryFuzzyReference(parsed ParsedFood) (*models.FoodPreview, bool) {
+	ref, err := e.db.GetReferenceFood(parsed.Name)
+	if err != nil || ref == nil {
+		return nil, false
+	}
+	if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
+		preview := e.calculator.Scale(*ref, amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		preview.Description = e.formatDescription(amount, e.parser.normalizeUnit(ref.Unit), ref.Name)
+		return &preview, true
+	}
+	return nil, false
+}
+
+// tryExternalProviders attempts to resolve food via external nutrition providers
+func (e *NutritionEngine) tryExternalProviders(parsed ParsedFood) (*models.FoodPreview, bool, error) {
+	if len(e.providers) == 0 {
+		return nil, false, nil
+	}
+
+	for _, provider := range e.providers {
+		ref, err := provider.ResolveFood(parsed)
+		if err != nil {
+			fmt.Printf("Warning: nutrition provider lookup error: %v\n", err)
+			continue
+		}
+		if ref == nil {
+			continue
+		}
+		ref.Name = parsed.Name
+		if err := e.validateMacros(ref.Macros); err != nil {
+			fmt.Printf("Warning: invalid macros from provider: %v\n", err)
+			continue
+		}
+		if err := e.db.CacheFood(*ref); err != nil {
+			fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
+		}
 		if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
 			preview := e.calculator.Scale(*ref, amount)
 			preview.Name = parsed.Name
 			preview.Unit = parsed.Unit
-			preview.Description = e.formatDescription(parsed.Amount, parsed.Unit, parsed.Name)
 			return &preview, true, nil
-		}
-	}
-
-	// 3. Fuzzy Match Reference
-	if ref != nil {
-		if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
-			preview := e.calculator.Scale(*ref, amount)
-			preview.Name = parsed.Name
-			preview.Unit = parsed.Unit
-			preview.Description = e.formatDescription(amount, e.parser.normalizeUnit(ref.Unit), ref.Name)
-			return &preview, true, nil
-		}
-	}
-
-	if len(e.providers) > 0 {
-		for _, provider := range e.providers {
-			ref, err := provider.ResolveFood(parsed)
-			if err != nil {
-				fmt.Printf("Warning: nutrition provider lookup error: %v\n", err)
-				continue
-			}
-			if ref != nil {
-				ref.Name = parsed.Name
-				if err := e.validateMacros(ref.Macros); err != nil {
-					fmt.Printf("Warning: invalid macros from provider: %v\n", err)
-					continue
-				}
-				if err := e.db.CacheFood(*ref); err != nil {
-					fmt.Printf("Warning: failed to cache nutrition provider result: %v\n", err)
-				}
-				if amount, ok := e.scaledAmount(*ref, parsed, true); ok {
-					preview := e.calculator.Scale(*ref, amount)
-					preview.Name = parsed.Name
-					preview.Unit = parsed.Unit
-					return &preview, true, nil
-				}
-			}
 		}
 	}
 
 	return nil, false, nil
+}
+
+// fuzzyFindInCache searches the cache for a fuzzy match
+func (e *NutritionEngine) fuzzyFindInCache(name string) (*models.ReferenceFood, error) {
+	allCache, err := e.db.GetAllCacheEntries()
+	if err != nil || len(allCache) == 0 {
+		return nil, err
+	}
+
+	candidates := make([]string, 0, len(allCache))
+	cacheMap := make(map[string]models.ReferenceFood)
+	for _, entry := range allCache {
+		candidates = append(candidates, entry.Name)
+		cacheMap[entry.Name] = entry
+	}
+
+	bestMatch, score := e.fuzzyMatcher.FindBestMatch(name, candidates)
+	if score >= e.fuzzyMatcher.threshold && bestMatch != "" {
+		if entry, ok := cacheMap[bestMatch]; ok {
+			return &entry, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func (e *NutritionEngine) formatDescription(amount float64, unit string, name string) string {
@@ -218,9 +355,19 @@ func (e *NutritionEngine) formatDescription(amount float64, unit string, name st
 }
 
 func (e *NutritionEngine) analyzeWithLLMFallback(description string, parsed ParsedFood) (*models.FoodPreview, error) {
-	// Step 5: LLM Fallback (Only if missing everywhere)
 	if e.llm == nil {
 		return nil, fmt.Errorf("no compatible nutrition data found for %q with unit %q", parsed.Name, parsed.Unit)
+	}
+
+	if cached, found := e.llmCache.Get(description); found {
+		cached.Name = parsed.Name
+		if err := e.db.CacheFood(*cached); err != nil {
+			fmt.Printf("Warning: failed to cache LLM result: %v\n", err)
+		}
+		preview := e.calculator.Scale(*cached, parsed.Amount)
+		preview.Name = parsed.Name
+		preview.Unit = parsed.Unit
+		return &preview, nil
 	}
 
 	llmRef, err := e.llm.ParseFood(description)
@@ -228,20 +375,17 @@ func (e *NutritionEngine) analyzeWithLLMFallback(description string, parsed Pars
 		return nil, err
 	}
 
-	// Validate realistic values
 	if err := e.validateMacros(llmRef.Macros); err != nil {
 		return nil, err
 	}
 
-	// Store result in cache for future use
-	// Ensure the cache entry name matches the normalized parsed name
+	e.llmCache.Set(description, *llmRef)
+
 	llmRef.Name = parsed.Name
 	if err := e.db.CacheFood(*llmRef); err != nil {
-		// Log error but don't fail the request
 		fmt.Printf("Warning: failed to cache LLM result: %v\n", err)
 	}
 
-	// Scale to requested amount
 	preview := e.calculator.Scale(*llmRef, parsed.Amount)
 	preview.Name = parsed.Name
 	preview.Unit = parsed.Unit
@@ -253,6 +397,18 @@ func (e *NutritionEngine) analyzeWholeMealWithLLMFallback(description string) (*
 		return nil, fmt.Errorf("could not resolve every food item without LLM: %s", description)
 	}
 
+	if cached, found := e.llmCache.Get(description); found {
+		cached.Name = e.parser.normalizeName(description)
+		cached.BaseQuantity = 1
+		cached.Unit = "unit"
+		if err := e.db.CacheFood(*cached); err != nil {
+			fmt.Printf("Warning: failed to cache LLM result: %v\n", err)
+		}
+		preview := e.calculator.Scale(*cached, 1)
+		preview.Description = cached.Name
+		return &preview, nil
+	}
+
 	llmRef, err := e.llm.ParseFood(description)
 	if err != nil {
 		return nil, err
@@ -260,6 +416,8 @@ func (e *NutritionEngine) analyzeWholeMealWithLLMFallback(description string) (*
 	if err := e.validateMacros(llmRef.Macros); err != nil {
 		return nil, err
 	}
+
+	e.llmCache.Set(description, *llmRef)
 
 	llmRef.Name = e.parser.normalizeName(description)
 	llmRef.BaseQuantity = 1
@@ -280,11 +438,7 @@ func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFo
 
 	normRefUnit := e.parser.normalizeUnit(ref.Unit)
 	if parsed.Unit == "" {
-		if normRefUnit == "" || normRefUnit == "unit" {
-			return parsed.Amount, true
-		}
-		// If ref is gram, we can assume unitless amount is grams
-		if normRefUnit == "gram" {
+		if normRefUnit == "" || normRefUnit == "unit" || normRefUnit == "gram" {
 			return parsed.Amount, true
 		}
 		return parsed.Amount, true
@@ -294,17 +448,10 @@ func (e *NutritionEngine) scaledAmount(ref models.ReferenceFood, parsed ParsedFo
 		return parsed.Amount, true
 	}
 
-	// If reference has no unit, we can be more lenient
 	if normRefUnit == "" {
-		// If user asked for 'unit' and ref has no unit, assume it's a unit-based ref
-		if parsed.Unit == "unit" {
+		if parsed.Unit == "unit" || parsed.Unit == "gram" {
 			return parsed.Amount, true
 		}
-		// If user asked for 'gram' and ref has no unit, assume it's gram-based
-		if parsed.Unit == "gram" {
-			return parsed.Amount, true
-		}
-		// Default to whatever amount was parsed
 		return parsed.Amount, true
 	}
 
@@ -328,27 +475,19 @@ func (e *NutritionEngine) estimateGrams(parsed ParsedFood) float64 {
 	}
 
 	for _, override := range rule.Overrides {
-		if containsAny(parsed.Name, override.Terms...) {
-			return amount * override.Value
+		for _, term := range override.Terms {
+			if strings.Contains(parsed.Name, term) {
+				return amount * override.Value
+			}
 		}
 	}
 	return amount * rule.Default
-}
-
-func containsAny(value string, terms ...string) bool {
-	for _, term := range terms {
-		if strings.Contains(value, term) {
-			return true
-		}
-	}
-	return false
 }
 
 func (e *NutritionEngine) validateMacros(m models.Macros) error {
 	if m.Calories < 0 || m.Protein < 0 || m.Carbs < 0 || m.Fat < 0 {
 		return fmt.Errorf("LLM returned unrealistic negative values")
 	}
-	// Simple rule: max 900kcal per 100g (pure fat)
 	if m.Calories > 5000 {
 		return fmt.Errorf("LLM returned unrealistic calorie value: %.0f", m.Calories)
 	}
