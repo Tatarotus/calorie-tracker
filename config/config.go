@@ -29,7 +29,7 @@ func Load() *Config {
 	return &Config{
 		SambaAPIKey:              getEnv("NVIDIA_API_KEY", ""),
 		OpenAIBaseURL:            getEnv("OPENAI_BASE_URL", "https://integrate.api.nvidia.com/v1"),
-		FoodModel:                getEnv("OPENAI_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning"),
+		FoodModel:                getEnv("OPENAI_MODEL", "meta/llama-3.3-70b-instruct"),
 		ReviewModel:              getEnv("OPENAI_MODEL2", "z-ai/glm-5.1"),
 		FatSecretClientID:        getEnv("FATSECRET_CLIENT_ID", ""),
 		FatSecretClientSecret:    getEnv("FATSECRET_CLIENT_SECRET", ""),

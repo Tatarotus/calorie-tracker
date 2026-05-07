@@ -50,7 +50,7 @@ func TestLoad(t *testing.T) {
 	if cfg.OpenAIBaseURL != "https://integrate.api.nvidia.com/v1" {
 		t.Errorf("Expected default OpenAIBaseURL, got %s", cfg.OpenAIBaseURL)
 	}
-	if cfg.FoodModel != "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning" {
+	if cfg.FoodModel != "meta/llama-3.3-70b-instruct" {
 		t.Errorf("Expected default FoodModel, got %s", cfg.FoodModel)
 	}
 	if cfg.ReviewModel != "z-ai/glm-5.1" {

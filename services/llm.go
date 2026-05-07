@@ -96,6 +96,7 @@ Rules:
 	}
 
 	jsonStr := s.extractJSON(content)
+	jsonStr = s.sanitizeJSON(jsonStr)
 	jsonStr = s.cleanJSON(jsonStr)
 
 	var result models.ReferenceFood
@@ -147,6 +148,8 @@ Rules:
 	}
 
 	jsonStr := s.extractJSON(content)
+	jsonStr = s.sanitizeJSON(jsonStr)
+	jsonStr = s.cleanJSON(jsonStr)
 	var result ParsedFoodItemsResponse
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
 		return nil, fmt.Errorf("failed to parse LLM response: %w, content: %s", err, content)
@@ -260,6 +263,81 @@ func (s *LLMService) cleanJSON(jsonStr string) string {
 	jsonStr = reQuotes.ReplaceAllString(jsonStr, "$1")
 
 	return jsonStr
+}
+
+// sanitizeJSON fixes common LLM JSON malformations:
+// - Unescaped newlines, tabs, carriage returns inside string values
+// - Trailing commas before closing brackets/braces
+// - Single-quoted strings (rare but possible)
+func (s *LLMService) sanitizeJSON(jsonStr string) string {
+	// Remove markdown code block markers if present
+	jsonStr = strings.TrimSpace(jsonStr)
+	jsonStr = strings.TrimPrefix(jsonStr, "```json")
+	jsonStr = strings.TrimPrefix(jsonStr, "```")
+	jsonStr = strings.TrimSuffix(jsonStr, "```")
+	jsonStr = strings.TrimSpace(jsonStr)
+
+	// Fix unescaped control characters inside string values.
+	// We scan character by character, tracking whether we're inside a string.
+	var sb strings.Builder
+	inString := false
+	escaped := false
+
+	for _, r := range jsonStr {
+		if escaped {
+			// If the previous char was a backslash, just write this char as-is
+			sb.WriteRune(r)
+			escaped = false
+			continue
+		}
+
+		if r == '\\' {
+			sb.WriteRune(r)
+			escaped = true
+			continue
+		}
+
+		if r == '"' {
+			inString = !inString
+			sb.WriteRune(r)
+			continue
+		}
+
+		if inString {
+			// Inside a string: escape control characters
+			switch r {
+			case '\n':
+				sb.WriteString("\\n")
+			case '\t':
+				sb.WriteString("\\t")
+			case '\r':
+				sb.WriteString("\\r")
+			case '\b':
+				sb.WriteString("\\b")
+			case '\f':
+				sb.WriteString("\\f")
+			default:
+				// Also escape any other control characters (0x00-0x1F except those handled above)
+				if r >= 0x00 && r <= 0x1F {
+					sb.WriteString(fmt.Sprintf("\\u%04x", r))
+				} else {
+					sb.WriteRune(r)
+				}
+			}
+		} else {
+			// Outside a string: write as-is
+			sb.WriteRune(r)
+		}
+	}
+
+	result := sb.String()
+
+	// Fix trailing commas before } or ]
+	// Pattern: ,\s*([}\]]) -> $1
+	reTrailingComma := regexp.MustCompile(`,\s*([}\]])`)
+	result = reTrailingComma.ReplaceAllString(result, "$1")
+
+	return result
 }
 
 // extractJSON extracts JSON from content that may contain markdown or other text

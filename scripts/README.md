@@ -9,6 +9,8 @@ The `pre_commit_check.sh` script runs all quality checks in a single pipeline:
 1. **Unit Tests** - Runs `go test ./...`
 2. **Coverage Check** - Ensures test coverage is ≥ 80%
 3. **CCN Check** - Validates cyclomatic complexity using existing `check_ccn.sh`
+4. **Module Size Check** - Ensures no Go file exceeds 500 lines
+5. **Linting** - Runs `golangci-lint` to detect unused code, bad imports, potential bugs
 
 ## Installation
 
@@ -48,6 +50,9 @@ bash scripts/pre_commit_check.sh
 ✔ Tests passed
 ✔ Coverage OK (>= 80%)
 ✔ CCN OK
+✔ Mutation skipped (CI only)
+✔ Module size OK
+✔ Architecture OK
 ✔ Commit allowed
 ```
 
@@ -86,6 +91,8 @@ To add a new quality check (e.g., linting, mutation testing):
 
 - **Minimum Coverage**: 80% (defined in `pre_commit_check.sh`)
 - **Max CCN**: 20 (defined in `check_ccn.sh` and `ccn_check.go`)
+- **Max File Size**: 500 lines (defined in `pre_commit_check.sh`)
+- **Mutation Testing**: Run in CI only (not pre-commit)
 
 ## Dependencies
 
@@ -95,3 +102,41 @@ To add a new quality check (e.g., linting, mutation testing):
   ```bash
   go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
   ```
+- golangci-lint (for linting) - install with:
+  ```bash
+  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+  ```
+
+## Quality Dimensions
+
+### 1. Test Coverage (≥ 80%)
+
+Runs `go test ./... -coverprofile=coverage.out` and checks the total coverage percentage.
+
+### 2. Cyclomatic Complexity (≤ 20)
+
+Uses `gocyclo` to check that no function exceeds a complexity of 20.
+
+### 3. Mutation Testing (≥ 60%, CI only)
+
+Runs a custom mutation testing script that modifies operators and checks if tests catch the changes. This is intentionally skipped in pre-commit due to time constraints.
+
+### 4. Module/File Size (≤ 500 lines)
+
+Checks that no Go source file exceeds 500 lines of code.
+
+### 5. Linting (Zero issues)
+
+Runs `golangci-lint` with the following enabled linters:
+- `govet` - Go vet analysis
+- `staticcheck` - Static analysis
+- `unused` - Unused code detection
+- `ineffassign` - Ineffective assignments
+- `gocyclo` - Cyclomatic complexity
+- `gosimple` - Simplification suggestions
+- `errcheck` - Unchecked errors
+- `deadcode` - Dead code detection
+- `structcheck` - Unused struct fields
+- `varcheck` - Unused variables
+- `typecheck` - Type checking
+- `goimports` - Import formatting

@@ -163,3 +163,160 @@ func TestLLMService_CleanJSON_EdgeCases(t *testing.T) {
 		}
 	}
 }
+
+func TestLLMService_SanitizeJSON_NewlinesInStrings(t *testing.T) {
+	llm := &LLMService{}
+
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "newline in string value",
+			input:    `{"name": "some food\nwith a newline", "amount": 100}`,
+			expected: `{"name": "some food\nwith a newline", "amount": 100}`,
+		},
+		{
+			name:     "tab in string value",
+			input:    `{"name": "some food\twith a tab", "amount": 100}`,
+			expected: `{"name": "some food\twith a tab", "amount": 100}`,
+		},
+		{
+			name:     "carriage return in string value",
+			input:    `{"name": "some food\rwith a cr", "amount": 100}`,
+			expected: `{"name": "some food\rwith a cr", "amount": 100}`,
+		},
+		{
+			name:     "multiple control chars in string",
+			input:    `{"name": "line1\nline2\tcol", "amount": 100}`,
+			expected: `{"name": "line1\nline2\tcol", "amount": 100}`,
+		},
+		{
+			name:  "newline outside string (preserved as valid JSON whitespace)",
+			input: "{\"name\": \"test\",\n\"amount\": 100}",
+			expected: `{"name": "test",
+"amount": 100}`,
+		},
+		{
+			name:     "trailing comma before closing brace",
+			input:    `{"name": "test", "amount": 100,}`,
+			expected: `{"name": "test", "amount": 100}`,
+		},
+		{
+			name:     "trailing comma before closing bracket",
+			input:    `{"items": [1, 2, 3,]}`,
+			expected: `{"items": [1, 2, 3]}`,
+		},
+		{
+			name:     "markdown code block markers",
+			input:    "```json\n{\"name\": \"test\"}\n```",
+			expected: `{"name": "test"}`,
+		},
+		{
+			name:     "complex malformed JSON with newlines and trailing comma",
+			input:    "{\"items\": [{\"name\": \"food\nname\", \"amount\": 100,}]}",
+			expected: `{"items": [{"name": "food\nname", "amount": 100}]}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := llm.sanitizeJSON(tc.input)
+			if got != tc.expected {
+				t.Errorf("sanitizeJSON() = %q, want %q", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestLLMService_ParseFoodItems_MalformedJSONWithNewlines(t *testing.T) {
+	// Simulate an LLM response with unescaped newlines inside a string value
+	malformedResponse := `{
+  "items": [
+    {
+      "name": "some food
+with a newline",
+      "amount": 100,
+      "unit": "gram",
+      "confidence": 0.95
+    }
+  ]
+}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		escapedContent, _ := json.Marshal(malformedResponse)
+		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		SambaAPIKey:   "test-key",
+		OpenAIBaseURL: server.URL,
+		FoodModel:     "test-model",
+	}
+	llm := NewLLMServiceWithClient(cfg, server.Client())
+
+	items, err := llm.ParseFoodItems("some food with a newline")
+	if err != nil {
+		t.Fatalf("Expected ParseFoodItems to handle malformed JSON, got error: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("Expected 1 item, got %d", len(items))
+	}
+	if items[0].Name != "food with newline" {
+		t.Errorf("Expected name 'food with newline', got %q", items[0].Name)
+	}
+	if items[0].Amount != 100 {
+		t.Errorf("Expected amount 100, got %f", items[0].Amount)
+	}
+	if items[0].Unit != "gram" {
+		t.Errorf("Expected unit 'gram', got %q", items[0].Unit)
+	}
+}
+
+func TestLLMService_ParseFood_MalformedJSONWithNewlines(t *testing.T) {
+	// Simulate an LLM response with unescaped newlines inside a string value
+	malformedResponse := `{
+  "name": "test food
+with newline",
+  "base_quantity": 100,
+  "unit": "g",
+  "macros": {
+    "calories": 150,
+    "protein": 5,
+    "carbs": 20,
+    "fat": 3
+  }
+}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		escapedContent, _ := json.Marshal(malformedResponse)
+		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		SambaAPIKey:   "test-key",
+		OpenAIBaseURL: server.URL,
+		FoodModel:     "test-model",
+	}
+	llm := NewLLMServiceWithClient(cfg, server.Client())
+
+	result, err := llm.ParseFood("test food with newline")
+	if err != nil {
+		t.Fatalf("Expected ParseFood to handle malformed JSON, got error: %v", err)
+	}
+	if result.Macros.Calories != 150 {
+		t.Errorf("Expected calories 150, got %f", result.Macros.Calories)
+	}
+	if result.Macros.Protein != 5 {
+		t.Errorf("Expected protein 5, got %f", result.Macros.Protein)
+	}
+}

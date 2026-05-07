@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Mutation Testing Script for Go (Line-by-Line)
-MIN_MUTATION_SCORE=${MIN_MUTATION_SCORE:-30}
+MIN_MUTATION_SCORE=${MIN_MUTATION_SCORE:-60}
 CRITICAL_FILES="services/tracker.go services/food_matcher.go db/sqlite.go"
 TEMP_DIR="${TEMP_DIR:-/tmp/go-mutation-$$}"
 LOG_FILE="$TEMP_DIR/mutation.log"

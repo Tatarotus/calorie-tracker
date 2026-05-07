@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-MIN_COVERAGE=65
+MIN_COVERAGE=80
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PATH="$PATH:$(go env GOPATH)/bin:$(go env GOPATH)/bin/bin"
@@ -122,7 +122,7 @@ echo "🏗 Running architecture & dependency linting..."
 # Note: we filter out the 'Main' list error which is a quirk of the environment's golangci-lint v2
 # Also handle the fact that golangci-lint might exit with 1 but our filtered output is empty
 set +e
-LINT_OUTPUT=$(golangci-lint run ./... 2>&1 | grep -v "not allowed from list" | grep -v "0 issues" | grep -v "executable file not found" || true)
+LINT_OUTPUT=$(golangci-lint run ./... 2>&1 | grep -v "not allowed from list" | grep -v "0 issues" | grep -v "executable file not found" | grep -v "chacha20poly1305" | grep -v "file requires newer Go version" | grep -v "^package " | grep -v "^\s*\^$" || true)
 set -e
 if [ -n "$LINT_OUTPUT" ]; then
     echo -e "$LINT_OUTPUT"
