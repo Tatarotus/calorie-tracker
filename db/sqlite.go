@@ -108,7 +108,7 @@ func (db *DB) migrateExistingTables() error {
 	}
 
 	if needsFoodCacheMigration {
-		if _, err := db.conn.Exec(`
+		if _, err = db.conn.Exec(`
 			CREATE TABLE IF NOT EXISTS food_cache_new (
 				description TEXT PRIMARY KEY,
 				base_quantity REAL,
@@ -127,10 +127,10 @@ func (db *DB) migrateExistingTables() error {
 			SELECT description, calories, protein, carbs, fat FROM food_cache
 		`)
 
-		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS food_cache`); err != nil {
+		if _, err = db.conn.Exec(`DROP TABLE IF EXISTS food_cache`); err != nil {
 			return fmt.Errorf("dropping old food_cache: %w", err)
 		}
-		if _, err := db.conn.Exec(`ALTER TABLE food_cache_new RENAME TO food_cache`); err != nil {
+		if _, err = db.conn.Exec(`ALTER TABLE food_cache_new RENAME TO food_cache`); err != nil {
 			return fmt.Errorf("renaming food_cache_new: %w", err)
 		}
 	}

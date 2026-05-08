@@ -20,8 +20,6 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
-        - unusedwrite
-        - shadow
   exclusions:
     generated: lax
     presets:
@@ -33,6 +31,10 @@ linters:
       - linters:
           - errcheck
         path: config/config_test.go
+      - linters:
+          - govet
+        text: "unusedwrite"
+        path: "_test\\.go"
     paths:
       - vendor
       - third_party$
