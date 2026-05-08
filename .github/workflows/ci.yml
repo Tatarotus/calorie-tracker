@@ -79,15 +79,11 @@ jobs:
 
     - name: Install golangci-lint
       run: |
-        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.64.5
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
     - name: Run golangci-lint
       run: |
-        LINT_OUTPUT=$(golangci-lint run ./... 2>&1 | grep -v "chacha20poly1305" | grep -v "file requires newer Go version" || true)
-        if [ -n "$LINT_OUTPUT" ]; then
-          echo "$LINT_OUTPUT"
-          exit 1
-        fi
+        golangci-lint run ./...
         echo "Linting passed"
 
   mutation:
