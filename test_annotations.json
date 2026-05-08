@@ -1,0 +1,38 @@
+[
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/Tatarotus/calorie-tracker/blob/dce20cfb780d57d52464ccf09b7b21bca72cab43/.github",
+    "start_line": 2,
+    "start_column": null,
+    "end_line": 2,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/setup-go@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/Tatarotus/calorie-tracker/blob/dce20cfb780d57d52464ccf09b7b21bca72cab43/.github",
+    "start_line": 470,
+    "start_column": null,
+    "end_line": 470,
+    "end_column": null,
+    "annotation_level": "failure",
+    "title": "",
+    "message": "Process completed with exit code 1.",
+    "raw_details": ""
+  },
+  {
+    "path": ".github",
+    "blob_href": "https://github.com/Tatarotus/calorie-tracker/blob/dce20cfb780d57d52464ccf09b7b21bca72cab43/.github",
+    "start_line": 9910,
+    "start_column": null,
+    "end_line": 9910,
+    "end_column": null,
+    "annotation_level": "warning",
+    "title": "",
+    "message": "Failed to restore: \"/usr/bin/tar\" failed with error: The process '/usr/bin/tar' failed with exit code 2",
+    "raw_details": ""
+  }
+]

@@ -1,5 +1,6 @@
 package config
 
+//nolint:errcheck // Test file - env var errors are not critical
 import (
 	"os"
 	"path/filepath"
@@ -21,16 +22,16 @@ func TestLoad(t *testing.T) {
 	origFatSecretLanguage := os.Getenv("FATSECRET_LANGUAGE")
 	origFatSecretUseLocalization := os.Getenv("FATSECRET_USE_LOCALIZATION")
 	defer func() {
-		os.Setenv("NVIDIA_API_KEY", origNVIDIA)
-		os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
-		os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
-		os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
-		os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
-		os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
-		os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
-		os.Setenv("FATSECRET_REGION", origFatSecretRegion)
-		os.Setenv("FATSECRET_LANGUAGE", origFatSecretLanguage)
-		os.Setenv("FATSECRET_USE_LOCALIZATION", origFatSecretUseLocalization)
+		_ = os.Setenv("NVIDIA_API_KEY", origNVIDIA)
+		_ = os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
+		_ = os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
+		_ = os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
+		_ = os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
+		_ = os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
+		_ = os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
+		_ = os.Setenv("FATSECRET_REGION", origFatSecretRegion)
+		_ = os.Setenv("FATSECRET_LANGUAGE", origFatSecretLanguage)
+		_ = os.Setenv("FATSECRET_USE_LOCALIZATION", origFatSecretUseLocalization)
 	}()
 
 	// Clear env vars to test defaults

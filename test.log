@@ -1,0 +1,435 @@
+=== RUN   TestMainStructure
+    main_test.go:10: Main package structure test
+--- PASS: TestMainStructure (0.00s)
+PASS
+ok  	calorie-tracker	0.015s
+?   	calorie-tracker/commands	[no test files]
+=== RUN   TestLoad
+--- PASS: TestLoad (0.00s)
+=== RUN   TestLoadWithEnvVars
+--- PASS: TestLoadWithEnvVars (0.00s)
+=== RUN   TestGetEnv
+--- PASS: TestGetEnv (0.00s)
+=== RUN   TestLoadDotEnv
+--- PASS: TestLoadDotEnv (0.00s)
+=== RUN   TestLoadDotEnvDoesNotOverrideEnvironment
+--- PASS: TestLoadDotEnvDoesNotOverrideEnvironment (0.00s)
+PASS
+ok  	calorie-tracker/config	0.018s
+?   	calorie-tracker/data	[no test files]
+=== RUN   TestNewMockDB
+--- PASS: TestNewMockDB (0.00s)
+=== RUN   TestMockDB_SetError
+--- PASS: TestMockDB_SetError (0.00s)
+=== RUN   TestMockDB_ClearError
+--- PASS: TestMockDB_ClearError (0.00s)
+=== RUN   TestMockDB_AddFoodEntry
+--- PASS: TestMockDB_AddFoodEntry (0.00s)
+=== RUN   TestMockDB_AddFoodEntry_WithError
+--- PASS: TestMockDB_AddFoodEntry_WithError (0.00s)
+=== RUN   TestMockDB_GetDailyFoodEntries
+--- PASS: TestMockDB_GetDailyFoodEntries (0.00s)
+=== RUN   TestMockDB_GetDailyFoodEntries_DifferentDate
+--- PASS: TestMockDB_GetDailyFoodEntries_DifferentDate (0.00s)
+=== RUN   TestMockDB_GetFoodEntriesRange
+--- PASS: TestMockDB_GetFoodEntriesRange (0.00s)
+=== RUN   TestMockDB_CacheFood
+--- PASS: TestMockDB_CacheFood (0.00s)
+=== RUN   TestMockDB_GetCachedFood_NotFound
+--- PASS: TestMockDB_GetCachedFood_NotFound (0.00s)
+=== RUN   TestMockDB_AddWaterEntry
+--- PASS: TestMockDB_AddWaterEntry (0.00s)
+=== RUN   TestMockDB_GetDailyWaterEntries
+--- PASS: TestMockDB_GetDailyWaterEntries (0.00s)
+=== RUN   TestMockDB_GetWaterEntriesRange
+--- PASS: TestMockDB_GetWaterEntriesRange (0.00s)
+=== RUN   TestMockDB_GetStatsRange
+--- PASS: TestMockDB_GetStatsRange (0.00s)
+=== RUN   TestMockDB_SetGoal
+--- PASS: TestMockDB_SetGoal (0.00s)
+=== RUN   TestMockDB_GetLatestGoal_NoGoal
+--- PASS: TestMockDB_GetLatestGoal_NoGoal (0.00s)
+=== RUN   TestMockDB_RemoveLastEntry
+--- PASS: TestMockDB_RemoveLastEntry (0.00s)
+=== RUN   TestMockDB_RemoveLastEntry_Empty
+--- PASS: TestMockDB_RemoveLastEntry_Empty (0.00s)
+=== RUN   TestMockDB_Close
+--- PASS: TestMockDB_Close (0.00s)
+=== RUN   TestMockDB_GetFoodEntries
+--- PASS: TestMockDB_GetFoodEntries (0.00s)
+=== RUN   TestMockDB_GetWaterEntries
+--- PASS: TestMockDB_GetWaterEntries (0.00s)
+=== RUN   TestMockDB_Clear
+--- PASS: TestMockDB_Clear (0.00s)
+=== RUN   TestParseTimestampComprehensive
+--- PASS: TestParseTimestampComprehensive (0.00s)
+=== RUN   TestParseTimestampEdgeCases
+--- PASS: TestParseTimestampEdgeCases (0.00s)
+=== RUN   TestParseTimestampFormats
+--- PASS: TestParseTimestampFormats (0.00s)
+=== RUN   TestParseTimestampBoundaryConditions
+--- PASS: TestParseTimestampBoundaryConditions (0.00s)
+=== RUN   TestMockDB_RemoveLastEntryEdgeCases
+--- PASS: TestMockDB_RemoveLastEntryEdgeCases (0.00s)
+=== RUN   TestSQLite_Migration
+--- PASS: TestSQLite_Migration (0.01s)
+=== RUN   TestSQLite_AddAndGetFoodEntry
+--- PASS: TestSQLite_AddAndGetFoodEntry (0.01s)
+=== RUN   TestSQLite_MultipleFoodEntries
+--- PASS: TestSQLite_MultipleFoodEntries (0.01s)
+=== RUN   TestSQLite_FoodEntriesDifferentDates
+--- PASS: TestSQLite_FoodEntriesDifferentDates (0.01s)
+=== RUN   TestSQLite_CacheFood
+--- PASS: TestSQLite_CacheFood (0.00s)
+=== RUN   TestSQLite_CacheFood_SpecialCharacters
+--- PASS: TestSQLite_CacheFood_SpecialCharacters (0.01s)
+=== RUN   TestSQLite_GetFoodEntriesRange
+--- PASS: TestSQLite_GetFoodEntriesRange (0.01s)
+=== RUN   TestSQLite_CacheFood_Duplicate
+--- PASS: TestSQLite_CacheFood_Duplicate (0.01s)
+=== RUN   TestSQLite_EmptyDescription
+--- PASS: TestSQLite_EmptyDescription (0.01s)
+=== RUN   TestSQLite_ZeroValues
+--- PASS: TestSQLite_ZeroValues (0.01s)
+=== RUN   TestSQLite_LargeValues
+--- PASS: TestSQLite_LargeValues (0.01s)
+=== RUN   TestSQLite_AddAndGetWaterEntry
+--- PASS: TestSQLite_AddAndGetWaterEntry (0.01s)
+=== RUN   TestSQLite_MultipleWaterEntries
+--- PASS: TestSQLite_MultipleWaterEntries (0.01s)
+=== RUN   TestSQLite_GetStatsRange
+--- PASS: TestSQLite_GetStatsRange (0.01s)
+=== RUN   TestSQLite_SetAndGetGoal
+--- PASS: TestSQLite_SetAndGetGoal (0.01s)
+=== RUN   TestSQLite_UpdateGoal
+--- PASS: TestSQLite_UpdateGoal (0.01s)
+=== RUN   TestSQLite_NoGoal
+--- PASS: TestSQLite_NoGoal (0.01s)
+=== RUN   TestSQLite_RemoveLastEntry
+--- PASS: TestSQLite_RemoveLastEntry (0.01s)
+=== RUN   TestSQLite_RemoveLastEntry_Empty
+--- PASS: TestSQLite_RemoveLastEntry_Empty (0.01s)
+=== RUN   TestSQLite_GetWaterEntriesRange
+--- PASS: TestSQLite_GetWaterEntriesRange (0.01s)
+=== RUN   TestGetStatsRangeComprehensive
+=== RUN   TestGetStatsRangeComprehensive/Today_only
+=== RUN   TestGetStatsRangeComprehensive/Last_2_days
+=== RUN   TestGetStatsRangeComprehensive/Last_7_days
+=== RUN   TestGetStatsRangeComprehensive/Large_range
+--- PASS: TestGetStatsRangeComprehensive (0.00s)
+    --- PASS: TestGetStatsRangeComprehensive/Today_only (0.00s)
+    --- PASS: TestGetStatsRangeComprehensive/Last_2_days (0.00s)
+    --- PASS: TestGetStatsRangeComprehensive/Last_7_days (0.00s)
+    --- PASS: TestGetStatsRangeComprehensive/Large_range (0.00s)
+=== RUN   TestGetStatsRangeBoundaryConditions
+--- PASS: TestGetStatsRangeBoundaryConditions (0.00s)
+PASS
+ok  	calorie-tracker/db	0.166s
+=== RUN   TestFoodEntryCreation
+--- PASS: TestFoodEntryCreation (0.00s)
+=== RUN   TestWaterEntryCreation
+--- PASS: TestWaterEntryCreation (0.00s)
+=== RUN   TestDailyStatsAggregation
+--- PASS: TestDailyStatsAggregation (0.00s)
+=== RUN   TestFoodPreviewCreation
+--- PASS: TestFoodPreviewCreation (0.00s)
+=== RUN   TestReviewDataCreation
+--- PASS: TestReviewDataCreation (0.00s)
+=== RUN   TestReviewResultCreation
+--- PASS: TestReviewResultCreation (0.00s)
+PASS
+ok  	calorie-tracker/models	0.019s
+=== RUN   TestCyclomaticComplexity
+--- PASS: TestCyclomaticComplexity (0.02s)
+PASS
+ok  	calorie-tracker/scripts/ccn	0.033s
+=== RUN   TestFoodParserRemoveAccents
+=== RUN   TestFoodParserRemoveAccents/no_accents
+=== RUN   TestFoodParserRemoveAccents/with_accents
+=== RUN   TestFoodParserRemoveAccents/mixed
+--- PASS: TestFoodParserRemoveAccents (0.00s)
+    --- PASS: TestFoodParserRemoveAccents/no_accents (0.00s)
+    --- PASS: TestFoodParserRemoveAccents/with_accents (0.00s)
+    --- PASS: TestFoodParserRemoveAccents/mixed (0.00s)
+=== RUN   TestFoodParserNormalizeUnit
+=== RUN   TestFoodParserNormalizeUnit/cup
+=== RUN   TestFoodParserNormalizeUnit/cups
+=== RUN   TestFoodParserNormalizeUnit/tablespoon
+=== RUN   TestFoodParserNormalizeUnit/tablespoons
+=== RUN   TestFoodParserNormalizeUnit/teaspoon
+=== RUN   TestFoodParserNormalizeUnit/teaspoons
+=== RUN   TestFoodParserNormalizeUnit/gram
+=== RUN   TestFoodParserNormalizeUnit/grams
+=== RUN   TestFoodParserNormalizeUnit/unit
+=== RUN   TestFoodParserNormalizeUnit/units
+=== RUN   TestFoodParserNormalizeUnit/unidade
+=== RUN   TestFoodParserNormalizeUnit/ounce
+=== RUN   TestFoodParserNormalizeUnit/ounces
+=== RUN   TestFoodParserNormalizeUnit/pound
+=== RUN   TestFoodParserNormalizeUnit/pounds
+=== RUN   TestFoodParserNormalizeUnit/unknown
+--- PASS: TestFoodParserNormalizeUnit (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/cup (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/cups (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/tablespoon (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/tablespoons (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/teaspoon (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/teaspoons (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/gram (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/grams (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/unit (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/units (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/unidade (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/ounce (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/ounces (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/pound (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/pounds (0.00s)
+    --- PASS: TestFoodParserNormalizeUnit/unknown (0.00s)
+=== RUN   TestFoodParserParse
+--- PASS: TestFoodParserParse (0.00s)
+=== RUN   TestFoodParserParseMeal
+--- PASS: TestFoodParserParseMeal (0.00s)
+=== RUN   TestLLMService_CallLLM_EmptyChoices
+--- PASS: TestLLMService_CallLLM_EmptyChoices (3.01s)
+=== RUN   TestLLMService_CallLLM_NonOKStatus
+--- PASS: TestLLMService_CallLLM_NonOKStatus (0.00s)
+=== RUN   TestLLMService_ParseFood_RetrySuccess
+--- PASS: TestLLMService_ParseFood_RetrySuccess (1.00s)
+=== RUN   TestLLMService_AnalyzeReview_RetrySuccess
+--- PASS: TestLLMService_AnalyzeReview_RetrySuccess (1.00s)
+=== RUN   TestLLMService_CleanJSON_EdgeCases
+--- PASS: TestLLMService_CleanJSON_EdgeCases (0.00s)
+=== RUN   TestLLMService_AnalyzeReview_Success
+--- PASS: TestLLMService_AnalyzeReview_Success (0.00s)
+=== RUN   TestLLMService_AnalyzeReview_WithMarkdown
+--- PASS: TestLLMService_AnalyzeReview_WithMarkdown (0.00s)
+=== RUN   TestLLMService_CallLLM_Authorization
+--- PASS: TestLLMService_CallLLM_Authorization (0.00s)
+=== RUN   TestLLMService_NoChoices
+--- PASS: TestLLMService_NoChoices (0.00s)
+=== RUN   TestLLMService_ParseFood_Retry
+--- PASS: TestLLMService_ParseFood_Retry (2.01s)
+=== RUN   TestLLMService_ParseFood_PermanentFailure
+--- PASS: TestLLMService_ParseFood_PermanentFailure (3.01s)
+=== RUN   TestLLMService_ParseFood_TableDriven
+=== RUN   TestLLMService_ParseFood_TableDriven/valid_response
+=== RUN   TestLLMService_ParseFood_TableDriven/response_with_units
+=== RUN   TestLLMService_ParseFood_TableDriven/response_with_quoted_numbers
+=== RUN   TestLLMService_ParseFood_TableDriven/invalid_JSON
+=== RUN   TestLLMService_ParseFood_TableDriven/missing_fields
+--- PASS: TestLLMService_ParseFood_TableDriven (0.01s)
+    --- PASS: TestLLMService_ParseFood_TableDriven/valid_response (0.00s)
+    --- PASS: TestLLMService_ParseFood_TableDriven/response_with_units (0.00s)
+    --- PASS: TestLLMService_ParseFood_TableDriven/response_with_quoted_numbers (0.00s)
+    --- PASS: TestLLMService_ParseFood_TableDriven/invalid_JSON (0.00s)
+    --- PASS: TestLLMService_ParseFood_TableDriven/missing_fields (0.00s)
+=== RUN   TestLLMService_AnalyzeReview_TableDriven
+=== RUN   TestLLMService_AnalyzeReview_TableDriven/valid_response
+=== RUN   TestLLMService_AnalyzeReview_TableDriven/response_with_markdown
+=== RUN   TestLLMService_AnalyzeReview_TableDriven/invalid_JSON
+=== RUN   TestLLMService_AnalyzeReview_TableDriven/score_at_boundaries
+--- PASS: TestLLMService_AnalyzeReview_TableDriven (0.00s)
+    --- PASS: TestLLMService_AnalyzeReview_TableDriven/valid_response (0.00s)
+    --- PASS: TestLLMService_AnalyzeReview_TableDriven/response_with_markdown (0.00s)
+    --- PASS: TestLLMService_AnalyzeReview_TableDriven/invalid_JSON (0.00s)
+    --- PASS: TestLLMService_AnalyzeReview_TableDriven/score_at_boundaries (0.00s)
+=== RUN   TestMacroCalculatorScale
+=== RUN   TestMacroCalculatorScale/Standard_scaling_2x
+=== RUN   TestMacroCalculatorScale/Small_scaling_0.5x
+=== RUN   TestMacroCalculatorScale/Zero_or_negative_amount_uses_base
+=== RUN   TestMacroCalculatorScale/Unit_based_scaling
+--- PASS: TestMacroCalculatorScale (0.00s)
+    --- PASS: TestMacroCalculatorScale/Standard_scaling_2x (0.00s)
+    --- PASS: TestMacroCalculatorScale/Small_scaling_0.5x (0.00s)
+    --- PASS: TestMacroCalculatorScale/Zero_or_negative_amount_uses_base (0.00s)
+    --- PASS: TestMacroCalculatorScale/Unit_based_scaling (0.00s)
+=== RUN   TestNutritionEngine_EstimateGrams
+=== RUN   TestNutritionEngine_EstimateGrams/default_cup
+=== RUN   TestNutritionEngine_EstimateGrams/cup_of_rice_(override)
+=== RUN   TestNutritionEngine_EstimateGrams/tablespoon_default
+=== RUN   TestNutritionEngine_EstimateGrams/tablespoon_oil_(override)
+=== RUN   TestNutritionEngine_EstimateGrams/unit_of_egg_(override)
+=== RUN   TestNutritionEngine_EstimateGrams/unknown_unit_defaults_to_0
+--- PASS: TestNutritionEngine_EstimateGrams (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/default_cup (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/cup_of_rice_(override) (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/tablespoon_default (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/tablespoon_oil_(override) (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/unit_of_egg_(override) (0.00s)
+    --- PASS: TestNutritionEngine_EstimateGrams/unknown_unit_defaults_to_0 (0.00s)
+=== RUN   TestNutritionEngine_HybridFlow
+=== RUN   TestNutritionEngine_HybridFlow/Priority_1:_Reference_DB_match_with_scaling
+=== RUN   TestNutritionEngine_HybridFlow/Natural_language_meal_resolves_without_LLM
+=== RUN   TestNutritionEngine_HybridFlow/Priority_2:_Cache_match_(Previous_LLM_result)
+=== RUN   TestNutritionEngine_HybridFlow/Explicit_unit_request_skips_incompatible_gram_cache
+=== RUN   TestNutritionEngine_HybridFlow/Priority_3:_LLM_Fallback_and_caching
+=== RUN   TestNutritionEngine_HybridFlow/Priority_3:_FatSecret_provider_resolves_and_caches_before_LLM
+=== RUN   TestNutritionEngine_HybridFlow/Reject_unrealistic_LLM_data
+--- PASS: TestNutritionEngine_HybridFlow (0.01s)
+    --- PASS: TestNutritionEngine_HybridFlow/Priority_1:_Reference_DB_match_with_scaling (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Natural_language_meal_resolves_without_LLM (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Priority_2:_Cache_match_(Previous_LLM_result) (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Explicit_unit_request_skips_incompatible_gram_cache (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Priority_3:_LLM_Fallback_and_caching (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Priority_3:_FatSecret_provider_resolves_and_caches_before_LLM (0.00s)
+    --- PASS: TestNutritionEngine_HybridFlow/Reject_unrealistic_LLM_data (0.00s)
+=== RUN   TestFatSecretProviderResolveFood
+--- PASS: TestFatSecretProviderResolveFood (0.00s)
+=== RUN   TestTrackerService_NewTrackerService
+--- PASS: TestTrackerService_NewTrackerService (0.00s)
+=== RUN   TestTrackerService_AddWater
+--- PASS: TestTrackerService_AddWater (0.00s)
+=== RUN   TestTrackerService_SetGoal
+--- PASS: TestTrackerService_SetGoal (0.00s)
+=== RUN   TestTrackerService_GetGoal_NoGoal
+--- PASS: TestTrackerService_GetGoal_NoGoal (0.00s)
+=== RUN   TestTrackerService_GetGoal_WithGoal
+--- PASS: TestTrackerService_GetGoal_WithGoal (0.00s)
+=== RUN   TestTrackerService_RemoveLastEntry
+--- PASS: TestTrackerService_RemoveLastEntry (0.00s)
+=== RUN   TestTrackerService_GetTodayFoodEntries
+--- PASS: TestTrackerService_GetTodayFoodEntries (0.00s)
+=== RUN   TestTrackerService_GetFoodEntriesRange
+--- PASS: TestTrackerService_GetFoodEntriesRange (0.00s)
+=== RUN   TestTrackerService_GetDailyStats
+--- PASS: TestTrackerService_GetDailyStats (0.00s)
+=== RUN   TestTrackerService_SaveFood
+--- PASS: TestTrackerService_SaveFood (0.00s)
+=== RUN   TestTrackerService_ParseFood_CacheFirst
+--- PASS: TestTrackerService_ParseFood_CacheFirst (0.00s)
+=== RUN   TestTrackerService_ParseFood_LLMFallback
+--- PASS: TestTrackerService_ParseFood_LLMFallback (0.00s)
+=== RUN   TestTrackerService_RunReview_Success
+--- PASS: TestTrackerService_RunReview_Success (0.00s)
+=== RUN   TestTrackerService_RunReview_NoGoal
+--- PASS: TestTrackerService_RunReview_NoGoal (0.00s)
+=== RUN   TestTrackerService_DailyStatsDateFormatting
+--- PASS: TestTrackerService_DailyStatsDateFormatting (0.00s)
+=== RUN   TestTrackerService_ErrorHandling_AddFoodEntry
+--- PASS: TestTrackerService_ErrorHandling_AddFoodEntry (0.00s)
+=== RUN   TestTrackerService_ErrorHandling_GetLatestGoal
+--- PASS: TestTrackerService_ErrorHandling_GetLatestGoal (0.00s)
+PASS
+ok  	calorie-tracker/services	10.086s
+=== RUN   TestFullFoodTrackingFlow
+--- PASS: TestFullFoodTrackingFlow (0.01s)
+=== RUN   TestWaterTrackingFlow
+--- PASS: TestWaterTrackingFlow (0.01s)
+=== RUN   TestGoalSettingFlow
+--- PASS: TestGoalSettingFlow (0.01s)
+=== RUN   TestDailyStatsAggregationFlow
+--- PASS: TestDailyStatsAggregationFlow (0.01s)
+=== RUN   TestUndoLastEntryFlow
+--- PASS: TestUndoLastEntryFlow (0.01s)
+=== RUN   TestMultipleDaysStatsFlow
+--- PASS: TestMultipleDaysStatsFlow (0.01s)
+PASS
+ok  	calorie-tracker/tests	0.057s
+=== RUN   TestNewModel
+--- PASS: TestNewModel (0.00s)
+=== RUN   TestView_DashboardView
+--- PASS: TestView_DashboardView (0.00s)
+=== RUN   TestView_AddFoodView
+--- PASS: TestView_AddFoodView (0.00s)
+=== RUN   TestView_AddWaterView
+--- PASS: TestView_AddWaterView (0.00s)
+=== RUN   TestView_ReviewView_WithReview
+--- PASS: TestView_ReviewView_WithReview (0.00s)
+=== RUN   TestView_ReviewView_NoReview
+--- PASS: TestView_ReviewView_NoReview (0.00s)
+=== RUN   TestView_ConfirmFoodView
+--- PASS: TestView_ConfirmFoodView (0.00s)
+=== RUN   TestView_TodayLogView
+--- PASS: TestView_TodayLogView (0.00s)
+=== RUN   TestView_WeekLogView
+--- PASS: TestView_WeekLogView (0.00s)
+=== RUN   TestView_MonthLogView
+--- PASS: TestView_MonthLogView (0.00s)
+=== RUN   TestView_SetGoalView
+--- PASS: TestView_SetGoalView (0.00s)
+=== RUN   TestView_EditFoodPreviewView
+--- PASS: TestView_EditFoodPreviewView (0.00s)
+=== RUN   TestView_Loading
+--- PASS: TestView_Loading (0.00s)
+=== RUN   TestView_Error
+--- PASS: TestView_Error (0.00s)
+=== RUN   TestRenderGoalComparison_WithCalorieGoal
+--- PASS: TestRenderGoalComparison_WithCalorieGoal (0.00s)
+=== RUN   TestRenderGoalComparison_WithWeightGoal
+--- PASS: TestRenderGoalComparison_WithWeightGoal (0.00s)
+=== RUN   TestRenderGoalComparison_NoMatch
+--- PASS: TestRenderGoalComparison_NoMatch (0.00s)
+=== RUN   TestRenderTodayLogString_WithEntries
+--- PASS: TestRenderTodayLogString_WithEntries (0.00s)
+=== RUN   TestRenderTodayLogString_Empty
+--- PASS: TestRenderTodayLogString_Empty (0.00s)
+=== RUN   TestRenderWeekLogString_WithEntries
+--- PASS: TestRenderWeekLogString_WithEntries (0.00s)
+=== RUN   TestRenderWeekLogString_Empty
+--- PASS: TestRenderWeekLogString_Empty (0.00s)
+=== RUN   TestRenderReviewString_WithReview
+--- PASS: TestRenderReviewString_WithReview (0.00s)
+=== RUN   TestRenderReviewString_NoReview
+--- PASS: TestRenderReviewString_NoReview (0.00s)
+=== RUN   TestIsLogOrReviewView
+--- PASS: TestIsLogOrReviewView (0.00s)
+=== RUN   TestHandleDashboardKeys_Quit
+--- PASS: TestHandleDashboardKeys_Quit (0.00s)
+=== RUN   TestHandleDashboardKeys_AddFood
+--- PASS: TestHandleDashboardKeys_AddFood (0.00s)
+=== RUN   TestHandleDashboardKeys_AddWater
+--- PASS: TestHandleDashboardKeys_AddWater (0.00s)
+=== RUN   TestHandleDashboardKeys_Review
+--- PASS: TestHandleDashboardKeys_Review (0.00s)
+=== RUN   TestHandleDashboardKeys_Today
+--- PASS: TestHandleDashboardKeys_Today (0.00s)
+=== RUN   TestHandleDashboardKeys_Week
+--- PASS: TestHandleDashboardKeys_Week (0.00s)
+=== RUN   TestHandleDashboardKeys_Month
+--- PASS: TestHandleDashboardKeys_Month (0.00s)
+=== RUN   TestHandleDashboardKeys_Goal
+--- PASS: TestHandleDashboardKeys_Goal (0.00s)
+=== RUN   TestHandleDashboardKeys_Undo
+--- PASS: TestHandleDashboardKeys_Undo (0.00s)
+=== RUN   TestInit
+--- PASS: TestInit (0.00s)
+=== RUN   TestHandleLogViewKeys_Quit
+--- PASS: TestHandleLogViewKeys_Quit (0.00s)
+=== RUN   TestHandleLogViewKeys_Dashboard
+--- PASS: TestHandleLogViewKeys_Dashboard (0.00s)
+=== RUN   TestHandleInputModeKeys_Quit
+--- PASS: TestHandleInputModeKeys_Quit (0.00s)
+=== RUN   TestHandleInputModeKeys_Escape
+--- PASS: TestHandleInputModeKeys_Escape (0.00s)
+=== RUN   TestHandleConfirmFoodKeys_Confirm
+--- PASS: TestHandleConfirmFoodKeys_Confirm (0.00s)
+=== RUN   TestHandleConfirmFoodKeys_Discard
+--- PASS: TestHandleConfirmFoodKeys_Discard (0.00s)
+=== RUN   TestHandleConfirmFoodKeys_Edit
+--- PASS: TestHandleConfirmFoodKeys_Edit (0.00s)
+=== RUN   TestHandleEditPreviewKeys_Next
+--- PASS: TestHandleEditPreviewKeys_Next (0.00s)
+=== RUN   TestHandleEditPreviewKeys_Cancel
+--- PASS: TestHandleEditPreviewKeys_Cancel (0.00s)
+=== RUN   TestUpdateViewportContent
+--- PASS: TestUpdateViewportContent (0.00s)
+=== RUN   TestSetupEditInput
+--- PASS: TestSetupEditInput (0.00s)
+=== RUN   TestUpdatePendingFoodFromEdit
+--- PASS: TestUpdatePendingFoodFromEdit (0.00s)
+=== RUN   TestNoOpCmd
+--- PASS: TestNoOpCmd (0.00s)
+PASS
+ok  	calorie-tracker/tui	0.025s
+=== RUN   TestFormatDate
+=== RUN   TestFormatDate/standard_date
+=== RUN   TestFormatDate/another_date
+=== RUN   TestFormatDate/zero_time
+--- PASS: TestFormatDate (0.00s)
+    --- PASS: TestFormatDate/standard_date (0.00s)
+    --- PASS: TestFormatDate/another_date (0.00s)
+    --- PASS: TestFormatDate/zero_time (0.00s)
+=== RUN   TestBeginningOfDay
+--- PASS: TestBeginningOfDay (0.00s)
+PASS
+ok  	calorie-tracker/utils	0.005s

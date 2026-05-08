@@ -1,0 +1,673 @@
+﻿2026-05-01T19:38:46.1321569Z Current runner version: '2.334.0'
+2026-05-01T19:38:46.1356703Z ##[group]Runner Image Provisioner
+2026-05-01T19:38:46.1357934Z Hosted Compute Agent
+2026-05-01T19:38:46.1358801Z Version: 20260213.493
+2026-05-01T19:38:46.1359885Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-05-01T19:38:46.1361410Z Build Date: 2026-02-13T00:28:41Z
+2026-05-01T19:38:46.1362482Z Worker ID: {87204553-578a-47f3-b62d-70282389723c}
+2026-05-01T19:38:46.1363803Z Azure Region: eastus2
+2026-05-01T19:38:46.1364607Z ##[endgroup]
+2026-05-01T19:38:46.1366962Z ##[group]Operating System
+2026-05-01T19:38:46.1367949Z Ubuntu
+2026-05-01T19:38:46.1368776Z 24.04.4
+2026-05-01T19:38:46.1369630Z LTS
+2026-05-01T19:38:46.1370461Z ##[endgroup]
+2026-05-01T19:38:46.1371337Z ##[group]Runner Image
+2026-05-01T19:38:46.1372159Z Image: ubuntu-24.04
+2026-05-01T19:38:46.1373113Z Version: 20260413.86.1
+2026-05-01T19:38:46.1375476Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+2026-05-01T19:38:46.1378304Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+2026-05-01T19:38:46.1379919Z ##[endgroup]
+2026-05-01T19:38:46.1381779Z ##[group]GITHUB_TOKEN Permissions
+2026-05-01T19:38:46.1385210Z Contents: read
+2026-05-01T19:38:46.1386110Z Metadata: read
+2026-05-01T19:38:46.1386983Z Packages: read
+2026-05-01T19:38:46.1387868Z ##[endgroup]
+2026-05-01T19:38:46.1390570Z Secret source: Actions
+2026-05-01T19:38:46.1391625Z Prepare workflow directory
+2026-05-01T19:38:46.1858550Z Prepare all required actions
+2026-05-01T19:38:46.1912311Z Getting action download info
+2026-05-01T19:38:46.5316656Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-05-01T19:38:46.6868675Z Download action repository 'actions/setup-go@v5' (SHA:40f1582b2485089dde7abd97c1529aa768e1baff)
+2026-05-01T19:38:46.9088140Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-05-01T19:38:47.0852297Z Download action repository 'codecov/codecov-action@v4' (SHA:b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238)
+2026-05-01T19:38:47.3803260Z Complete job name: test
+2026-05-01T19:38:47.4551295Z ##[group]Run actions/checkout@v4
+2026-05-01T19:38:47.4552163Z with:
+2026-05-01T19:38:47.4552601Z   repository: Tatarotus/calorie-tracker
+2026-05-01T19:38:47.4553352Z   token: ***
+2026-05-01T19:38:47.4553779Z   ssh-strict: true
+2026-05-01T19:38:47.4554194Z   ssh-user: git
+2026-05-01T19:38:47.4554608Z   persist-credentials: true
+2026-05-01T19:38:47.4555578Z   clean: true
+2026-05-01T19:38:47.4556015Z   sparse-checkout-cone-mode: true
+2026-05-01T19:38:47.4556541Z   fetch-depth: 1
+2026-05-01T19:38:47.4556995Z   fetch-tags: false
+2026-05-01T19:38:47.4557438Z   show-progress: true
+2026-05-01T19:38:47.4557877Z   lfs: false
+2026-05-01T19:38:47.4558266Z   submodules: false
+2026-05-01T19:38:47.4558715Z   set-safe-directory: true
+2026-05-01T19:38:47.4559574Z ##[endgroup]
+2026-05-01T19:38:47.5672117Z Syncing repository: Tatarotus/calorie-tracker
+2026-05-01T19:38:47.5673985Z ##[group]Getting Git version info
+2026-05-01T19:38:47.5675113Z Working directory is '/home/runner/work/calorie-tracker/calorie-tracker'
+2026-05-01T19:38:47.5676418Z [command]/usr/bin/git version
+2026-05-01T19:38:47.5717931Z git version 2.53.0
+2026-05-01T19:38:47.5743803Z ##[endgroup]
+2026-05-01T19:38:47.5758119Z Temporarily overriding HOME='/home/runner/work/_temp/be14bc12-6c83-4bfb-9a5a-c7f7329d03d1' before making global git config changes
+2026-05-01T19:38:47.5759639Z Adding repository directory to the temporary git global config as a safe directory
+2026-05-01T19:38:47.5770673Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/calorie-tracker/calorie-tracker
+2026-05-01T19:38:47.5800994Z Deleting the contents of '/home/runner/work/calorie-tracker/calorie-tracker'
+2026-05-01T19:38:47.5804470Z ##[group]Initializing the repository
+2026-05-01T19:38:47.5808886Z [command]/usr/bin/git init /home/runner/work/calorie-tracker/calorie-tracker
+2026-05-01T19:38:47.5913659Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-05-01T19:38:47.5916150Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-05-01T19:38:47.5917326Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-05-01T19:38:47.5918172Z hint: call:
+2026-05-01T19:38:47.5918696Z hint:
+2026-05-01T19:38:47.5919201Z hint: 	git config --global init.defaultBranch <name>
+2026-05-01T19:38:47.5920032Z hint:
+2026-05-01T19:38:47.5920868Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-05-01T19:38:47.5921858Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-05-01T19:38:47.5922621Z hint:
+2026-05-01T19:38:47.5922998Z hint: 	git branch -m <name>
+2026-05-01T19:38:47.5923456Z hint:
+2026-05-01T19:38:47.5924061Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-05-01T19:38:47.5925766Z Initialized empty Git repository in /home/runner/work/calorie-tracker/calorie-tracker/.git/
+2026-05-01T19:38:47.5927856Z [command]/usr/bin/git remote add origin https://github.com/Tatarotus/calorie-tracker
+2026-05-01T19:38:47.5955208Z ##[endgroup]
+2026-05-01T19:38:47.5956009Z ##[group]Disabling automatic garbage collection
+2026-05-01T19:38:47.5958830Z [command]/usr/bin/git config --local gc.auto 0
+2026-05-01T19:38:47.5986271Z ##[endgroup]
+2026-05-01T19:38:47.5986960Z ##[group]Setting up auth
+2026-05-01T19:38:47.5993079Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-05-01T19:38:47.6021983Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-05-01T19:38:47.6317731Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-05-01T19:38:47.6348334Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-05-01T19:38:47.6560559Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-05-01T19:38:47.6598417Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-05-01T19:38:47.6818037Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-05-01T19:38:47.6850965Z ##[endgroup]
+2026-05-01T19:38:47.6852242Z ##[group]Fetching the repository
+2026-05-01T19:38:47.6861483Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +cb690c50cf30fe2db6913bc8ea767a6456332ea5:refs/remotes/origin/main
+2026-05-01T19:38:48.8779087Z From https://github.com/Tatarotus/calorie-tracker
+2026-05-01T19:38:48.8780562Z  * [new ref]         cb690c50cf30fe2db6913bc8ea767a6456332ea5 -> origin/main
+2026-05-01T19:38:48.8807670Z ##[endgroup]
+2026-05-01T19:38:48.8808113Z ##[group]Determining the checkout info
+2026-05-01T19:38:48.8809979Z ##[endgroup]
+2026-05-01T19:38:48.8815009Z [command]/usr/bin/git sparse-checkout disable
+2026-05-01T19:38:48.8851673Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-05-01T19:38:48.8876883Z ##[group]Checking out the ref
+2026-05-01T19:38:48.8881432Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-05-01T19:38:48.9540220Z Switched to a new branch 'main'
+2026-05-01T19:38:48.9541347Z branch 'main' set up to track 'origin/main'.
+2026-05-01T19:38:48.9548637Z ##[endgroup]
+2026-05-01T19:38:48.9583355Z [command]/usr/bin/git log -1 --format=%H
+2026-05-01T19:38:48.9605133Z cb690c50cf30fe2db6913bc8ea767a6456332ea5
+2026-05-01T19:38:48.9828765Z ##[group]Run actions/setup-go@v5
+2026-05-01T19:38:48.9829118Z with:
+2026-05-01T19:38:48.9829340Z   go-version: 1.23
+2026-05-01T19:38:48.9829588Z   check-latest: false
+2026-05-01T19:38:48.9830221Z   token: ***
+2026-05-01T19:38:48.9830451Z   cache: true
+2026-05-01T19:38:48.9830669Z ##[endgroup]
+2026-05-01T19:38:49.1492913Z Setup go version spec 1.23
+2026-05-01T19:38:49.1762873Z Found in cache @ /opt/hostedtoolcache/go/1.23.12/x64
+2026-05-01T19:38:49.1767722Z Added go to the path
+2026-05-01T19:38:49.1771663Z Successfully set up Go version 1.23
+2026-05-01T19:38:49.5140905Z [command]/opt/hostedtoolcache/go/1.23.12/x64/bin/go env GOMODCACHE
+2026-05-01T19:38:49.5176097Z [command]/opt/hostedtoolcache/go/1.23.12/x64/bin/go env GOCACHE
+2026-05-01T19:38:49.5201275Z /home/runner/go/pkg/mod
+2026-05-01T19:38:49.5230958Z /home/runner/.cache/go-build
+2026-05-01T19:38:49.6267231Z Cache hit for: setup-go-Linux-x64-ubuntu24-go-1.23.12-3e84400bdfc0b432c9b3f459298966f6e8ab98a831a0b95e83f77a28ed0c8eb0
+2026-05-01T19:38:49.8566627Z Received 8725388 of 8725388 (100.0%), 48.9 MBs/sec
+2026-05-01T19:38:49.8567311Z Cache Size: ~8 MB (8725388 B)
+2026-05-01T19:38:49.8603538Z [command]/usr/bin/tar -xf /home/runner/work/_temp/8c6d1b99-d19e-43b3-ada7-f0ec561c05ab/cache.tzst -P -C /home/runner/work/calorie-tracker/calorie-tracker --use-compress-program unzstd
+2026-05-01T19:38:49.9576994Z Cache restored successfully
+2026-05-01T19:38:49.9589097Z Cache restored from key: setup-go-Linux-x64-ubuntu24-go-1.23.12-3e84400bdfc0b432c9b3f459298966f6e8ab98a831a0b95e83f77a28ed0c8eb0
+2026-05-01T19:38:49.9610904Z go version go1.23.12 linux/amd64
+2026-05-01T19:38:49.9611233Z 
+2026-05-01T19:38:49.9611694Z ##[group]go env
+2026-05-01T19:38:49.9715229Z GO111MODULE=''
+2026-05-01T19:38:49.9715605Z GOARCH='amd64'
+2026-05-01T19:38:49.9715818Z GOBIN=''
+2026-05-01T19:38:49.9716037Z GOCACHE='/home/runner/.cache/go-build'
+2026-05-01T19:38:49.9716340Z GOENV='/home/runner/.config/go/env'
+2026-05-01T19:38:49.9716590Z GOEXE=''
+2026-05-01T19:38:49.9716798Z GOEXPERIMENT=''
+2026-05-01T19:38:49.9716994Z GOFLAGS=''
+2026-05-01T19:38:49.9717185Z GOHOSTARCH='amd64'
+2026-05-01T19:38:49.9717386Z GOHOSTOS='linux'
+2026-05-01T19:38:49.9717570Z GOINSECURE=''
+2026-05-01T19:38:49.9717795Z GOMODCACHE='/home/runner/go/pkg/mod'
+2026-05-01T19:38:49.9718058Z GONOPROXY=''
+2026-05-01T19:38:49.9718235Z GONOSUMDB=''
+2026-05-01T19:38:49.9718409Z GOOS='linux'
+2026-05-01T19:38:49.9718603Z GOPATH='/home/runner/go'
+2026-05-01T19:38:49.9718810Z GOPRIVATE=''
+2026-05-01T19:38:49.9719072Z GOPROXY='https://proxy.golang.org,direct'
+2026-05-01T19:38:49.9719416Z GOROOT='/opt/hostedtoolcache/go/1.23.12/x64'
+2026-05-01T19:38:49.9719696Z GOSUMDB='sum.golang.org'
+2026-05-01T19:38:49.9719908Z GOTMPDIR=''
+2026-05-01T19:38:49.9720093Z GOTOOLCHAIN='auto'
+2026-05-01T19:38:49.9720401Z GOTOOLDIR='/opt/hostedtoolcache/go/1.23.12/x64/pkg/tool/linux_amd64'
+2026-05-01T19:38:49.9720762Z GOVCS=''
+2026-05-01T19:38:49.9720945Z GOVERSION='go1.23.12'
+2026-05-01T19:38:49.9721150Z GODEBUG=''
+2026-05-01T19:38:49.9721334Z GOTELEMETRY='local'
+2026-05-01T19:38:49.9721593Z GOTELEMETRYDIR='/home/runner/.config/go/telemetry'
+2026-05-01T19:38:49.9721896Z GCCGO='gccgo'
+2026-05-01T19:38:49.9722079Z GOAMD64='v1'
+2026-05-01T19:38:49.9722305Z AR='ar'
+2026-05-01T19:38:49.9722471Z CC='gcc'
+2026-05-01T19:38:49.9722631Z CXX='g++'
+2026-05-01T19:38:49.9722831Z CGO_ENABLED='1'
+2026-05-01T19:38:49.9723146Z GOMOD='/home/runner/work/calorie-tracker/calorie-tracker/go.mod'
+2026-05-01T19:38:49.9723499Z GOWORK=''
+2026-05-01T19:38:49.9723691Z CGO_CFLAGS='-O2 -g'
+2026-05-01T19:38:49.9723899Z CGO_CPPFLAGS=''
+2026-05-01T19:38:49.9724115Z CGO_CXXFLAGS='-O2 -g'
+2026-05-01T19:38:49.9724327Z CGO_FFLAGS='-O2 -g'
+2026-05-01T19:38:49.9724528Z CGO_LDFLAGS='-O2 -g'
+2026-05-01T19:38:49.9724984Z PKG_CONFIG='pkg-config'
+2026-05-01T19:38:49.9725714Z GOGCCFLAGS='-fPIC -m64 -pthread -Wl,--no-gc-sections -fmessage-length=0 -ffile-prefix-map=/tmp/go-build2281675511=/tmp/go-build -gno-record-gcc-switches'
+2026-05-01T19:38:49.9726334Z 
+2026-05-01T19:38:49.9726908Z ##[endgroup]
+2026-05-01T19:38:50.0778555Z ##[group]Run actions/cache@v4
+2026-05-01T19:38:50.0778822Z with:
+2026-05-01T19:38:50.0779001Z   path: ~/go/pkg/mod
+2026-05-01T19:38:50.0779368Z   key: Linux-go-3e84400bdfc0b432c9b3f459298966f6e8ab98a831a0b95e83f77a28ed0c8eb0
+2026-05-01T19:38:50.0779976Z   restore-keys: Linux-go-
+
+2026-05-01T19:38:50.0780215Z   enableCrossOsArchive: false
+2026-05-01T19:38:50.0780453Z   fail-on-cache-miss: false
+2026-05-01T19:38:50.0780681Z   lookup-only: false
+2026-05-01T19:38:50.0780875Z   save-always: false
+2026-05-01T19:38:50.0781063Z ##[endgroup]
+2026-05-01T19:38:50.2885728Z Cache not found for input keys: Linux-go-3e84400bdfc0b432c9b3f459298966f6e8ab98a831a0b95e83f77a28ed0c8eb0, Linux-go-
+2026-05-01T19:38:50.2959710Z ##[group]Run go test ./... -v -timeout 2m
+2026-05-01T19:38:50.2960084Z [36;1mgo test ./... -v -timeout 2m[0m
+2026-05-01T19:38:50.2985213Z shell: /usr/bin/bash -e {0}
+2026-05-01T19:38:50.2985478Z ##[endgroup]
+2026-05-01T19:38:50.3795431Z go: downloading github.com/charmbracelet/bubbletea v0.25.0
+2026-05-01T19:38:50.3910976Z go: downloading github.com/spf13/cobra v1.10.2
+2026-05-01T19:38:50.5585306Z go: downloading modernc.org/sqlite v1.34.4
+2026-05-01T19:38:50.5641161Z go: downloading github.com/charmbracelet/bubbles v0.18.0
+2026-05-01T19:38:50.6486478Z go: downloading github.com/charmbracelet/lipgloss v0.9.1
+2026-05-01T19:38:50.6713788Z go: downloading golang.org/x/text v0.22.0
+2026-05-01T19:38:51.3844982Z go: downloading github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81
+2026-05-01T19:38:51.4042584Z go: downloading github.com/mattn/go-isatty v0.0.20
+2026-05-01T19:38:51.4065033Z go: downloading github.com/mattn/go-localereader v0.0.1
+2026-05-01T19:38:51.4118953Z go: downloading github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
+2026-05-01T19:38:51.4234361Z go: downloading github.com/muesli/cancelreader v0.2.2
+2026-05-01T19:38:51.4250087Z go: downloading github.com/muesli/reflow v0.3.0
+2026-05-01T19:38:51.4329216Z go: downloading github.com/muesli/termenv v0.15.2
+2026-05-01T19:38:51.4471907Z go: downloading golang.org/x/sync v0.11.0
+2026-05-01T19:38:51.4530222Z go: downloading golang.org/x/term v0.29.0
+2026-05-01T19:38:51.4925080Z go: downloading github.com/spf13/pflag v1.0.10
+2026-05-01T19:38:51.8028176Z go: downloading github.com/atotto/clipboard v0.1.4
+2026-05-01T19:38:51.8123729Z go: downloading github.com/mattn/go-runewidth v0.0.15
+2026-05-01T19:38:51.8237317Z go: downloading github.com/rivo/uniseg v0.4.7
+2026-05-01T19:38:52.0320361Z go: downloading golang.org/x/sys v0.30.0
+2026-05-01T19:38:52.0321471Z go: downloading github.com/aymanbagabas/go-osc52/v2 v2.0.1
+2026-05-01T19:38:52.0534288Z go: downloading github.com/lucasb-eyer/go-colorful v1.2.0
+2026-05-01T19:38:53.1413622Z go: downloading modernc.org/libc v1.55.3
+2026-05-01T19:38:54.0679516Z go: downloading github.com/dustin/go-humanize v1.0.1
+2026-05-01T19:38:54.0680229Z go: downloading modernc.org/mathutil v1.6.0
+2026-05-01T19:38:54.0680888Z go: downloading github.com/google/uuid v1.6.0
+2026-05-01T19:38:54.0683812Z go: downloading modernc.org/memory v1.8.0
+2026-05-01T19:38:54.1090657Z go: downloading github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec
+2026-05-01T19:39:17.0919342Z === RUN   TestMainStructure
+2026-05-01T19:39:17.0920291Z     main_test.go:10: Main package structure test
+2026-05-01T19:39:17.0920845Z --- PASS: TestMainStructure (0.00s)
+2026-05-01T19:39:17.0921134Z PASS
+2026-05-01T19:39:17.0921430Z ok  	calorie-tracker	0.004s
+2026-05-01T19:39:17.0921952Z ?   	calorie-tracker/commands	[no test files]
+2026-05-01T19:39:17.0927248Z ?   	calorie-tracker/data	[no test files]
+2026-05-01T19:39:17.0975482Z === RUN   TestLoad
+2026-05-01T19:39:17.0989555Z --- PASS: TestLoad (0.00s)
+2026-05-01T19:39:17.0992149Z === RUN   TestLoadWithEnvVars
+2026-05-01T19:39:17.0993270Z --- PASS: TestLoadWithEnvVars (0.00s)
+2026-05-01T19:39:17.0994090Z === RUN   TestGetEnv
+2026-05-01T19:39:17.0995254Z --- PASS: TestGetEnv (0.00s)
+2026-05-01T19:39:17.0995987Z === RUN   TestLoadDotEnv
+2026-05-01T19:39:17.0997027Z --- PASS: TestLoadDotEnv (0.00s)
+2026-05-01T19:39:17.0997767Z === RUN   TestLoadDotEnvDoesNotOverrideEnvironment
+2026-05-01T19:39:17.0998746Z --- PASS: TestLoadDotEnvDoesNotOverrideEnvironment (0.00s)
+2026-05-01T19:39:17.0999914Z PASS
+2026-05-01T19:39:17.1000516Z ok  	calorie-tracker/config	0.003s
+2026-05-01T19:39:17.5895784Z === RUN   TestNewMockDB
+2026-05-01T19:39:17.5897282Z --- PASS: TestNewMockDB (0.00s)
+2026-05-01T19:39:17.5898036Z === RUN   TestMockDB_SetError
+2026-05-01T19:39:17.5898762Z --- PASS: TestMockDB_SetError (0.00s)
+2026-05-01T19:39:17.5899636Z === RUN   TestMockDB_ClearError
+2026-05-01T19:39:17.5900307Z --- PASS: TestMockDB_ClearError (0.00s)
+2026-05-01T19:39:17.5901357Z === RUN   TestMockDB_AddFoodEntry
+2026-05-01T19:39:17.5902106Z --- PASS: TestMockDB_AddFoodEntry (0.00s)
+2026-05-01T19:39:17.5902844Z === RUN   TestMockDB_AddFoodEntry_WithError
+2026-05-01T19:39:17.5903600Z --- PASS: TestMockDB_AddFoodEntry_WithError (0.00s)
+2026-05-01T19:39:17.5904523Z === RUN   TestMockDB_GetDailyFoodEntries
+2026-05-01T19:39:17.5906384Z --- PASS: TestMockDB_GetDailyFoodEntries (0.00s)
+2026-05-01T19:39:17.5907439Z === RUN   TestMockDB_GetDailyFoodEntries_DifferentDate
+2026-05-01T19:39:17.5908409Z --- PASS: TestMockDB_GetDailyFoodEntries_DifferentDate (0.00s)
+2026-05-01T19:39:17.5909451Z === RUN   TestMockDB_GetFoodEntriesRange
+2026-05-01T19:39:17.5910303Z --- PASS: TestMockDB_GetFoodEntriesRange (0.00s)
+2026-05-01T19:39:17.5911281Z === RUN   TestMockDB_CacheFood
+2026-05-01T19:39:17.5911977Z --- PASS: TestMockDB_CacheFood (0.00s)
+2026-05-01T19:39:17.5912721Z === RUN   TestMockDB_GetCachedFood_NotFound
+2026-05-01T19:39:17.5913546Z --- PASS: TestMockDB_GetCachedFood_NotFound (0.00s)
+2026-05-01T19:39:17.5914295Z === RUN   TestMockDB_AddWaterEntry
+2026-05-01T19:39:17.5915964Z --- PASS: TestMockDB_AddWaterEntry (0.00s)
+2026-05-01T19:39:17.5916848Z === RUN   TestMockDB_GetDailyWaterEntries
+2026-05-01T19:39:17.5917715Z --- PASS: TestMockDB_GetDailyWaterEntries (0.00s)
+2026-05-01T19:39:17.5918719Z === RUN   TestMockDB_GetWaterEntriesRange
+2026-05-01T19:39:17.5919443Z --- PASS: TestMockDB_GetWaterEntriesRange (0.00s)
+2026-05-01T19:39:17.5920521Z === RUN   TestMockDB_GetStatsRange
+2026-05-01T19:39:17.5921384Z --- PASS: TestMockDB_GetStatsRange (0.00s)
+2026-05-01T19:39:17.5922259Z === RUN   TestMockDB_SetGoal
+2026-05-01T19:39:17.5922980Z --- PASS: TestMockDB_SetGoal (0.00s)
+2026-05-01T19:39:17.5923766Z === RUN   TestMockDB_GetLatestGoal_NoGoal
+2026-05-01T19:39:17.5924806Z --- PASS: TestMockDB_GetLatestGoal_NoGoal (0.00s)
+2026-05-01T19:39:17.5926153Z === RUN   TestMockDB_RemoveLastEntry
+2026-05-01T19:39:17.5927077Z --- PASS: TestMockDB_RemoveLastEntry (0.00s)
+2026-05-01T19:39:17.5928176Z === RUN   TestMockDB_RemoveLastEntry_Empty
+2026-05-01T19:39:17.5929128Z --- PASS: TestMockDB_RemoveLastEntry_Empty (0.00s)
+2026-05-01T19:39:17.5930115Z === RUN   TestMockDB_Close
+2026-05-01T19:39:17.5931041Z --- PASS: TestMockDB_Close (0.00s)
+2026-05-01T19:39:17.5932045Z === RUN   TestMockDB_GetFoodEntries
+2026-05-01T19:39:17.5932913Z --- PASS: TestMockDB_GetFoodEntries (0.00s)
+2026-05-01T19:39:17.5933787Z === RUN   TestMockDB_GetWaterEntries
+2026-05-01T19:39:17.5934646Z --- PASS: TestMockDB_GetWaterEntries (0.00s)
+2026-05-01T19:39:17.5935451Z === RUN   TestMockDB_Clear
+2026-05-01T19:39:17.5936429Z --- PASS: TestMockDB_Clear (0.00s)
+2026-05-01T19:39:17.5937316Z === RUN   TestParseTimestampComprehensive
+2026-05-01T19:39:17.5938261Z --- PASS: TestParseTimestampComprehensive (0.00s)
+2026-05-01T19:39:17.5939344Z === RUN   TestParseTimestampEdgeCases
+2026-05-01T19:39:17.5940281Z --- PASS: TestParseTimestampEdgeCases (0.00s)
+2026-05-01T19:39:17.5941252Z === RUN   TestParseTimestampFormats
+2026-05-01T19:39:17.5942180Z --- PASS: TestParseTimestampFormats (0.00s)
+2026-05-01T19:39:17.5943114Z === RUN   TestParseTimestampBoundaryConditions
+2026-05-01T19:39:17.5944260Z --- PASS: TestParseTimestampBoundaryConditions (0.00s)
+2026-05-01T19:39:17.5945731Z === RUN   TestMockDB_RemoveLastEntryEdgeCases
+2026-05-01T19:39:17.5946602Z --- PASS: TestMockDB_RemoveLastEntryEdgeCases (0.00s)
+2026-05-01T19:39:17.5947391Z === RUN   TestSQLite_Migration
+2026-05-01T19:39:17.5947967Z --- PASS: TestSQLite_Migration (0.01s)
+2026-05-01T19:39:17.5948799Z === RUN   TestSQLite_AddAndGetFoodEntry
+2026-05-01T19:39:17.5950038Z --- PASS: TestSQLite_AddAndGetFoodEntry (0.01s)
+2026-05-01T19:39:17.5950836Z === RUN   TestSQLite_MultipleFoodEntries
+2026-05-01T19:39:17.5951604Z --- PASS: TestSQLite_MultipleFoodEntries (0.01s)
+2026-05-01T19:39:17.5952448Z === RUN   TestSQLite_FoodEntriesDifferentDates
+2026-05-01T19:39:17.5953262Z --- PASS: TestSQLite_FoodEntriesDifferentDates (0.00s)
+2026-05-01T19:39:17.5954029Z === RUN   TestSQLite_CacheFood
+2026-05-01T19:39:17.5954868Z --- PASS: TestSQLite_CacheFood (0.00s)
+2026-05-01T19:39:17.5955819Z === RUN   TestSQLite_CacheFood_SpecialCharacters
+2026-05-01T19:39:17.5956915Z --- PASS: TestSQLite_CacheFood_SpecialCharacters (0.00s)
+2026-05-01T19:39:17.5957779Z === RUN   TestSQLite_GetFoodEntriesRange
+2026-05-01T19:39:17.5958519Z --- PASS: TestSQLite_GetFoodEntriesRange (0.00s)
+2026-05-01T19:39:17.5959451Z === RUN   TestSQLite_CacheFood_Duplicate
+2026-05-01T19:39:17.5960081Z --- PASS: TestSQLite_CacheFood_Duplicate (0.00s)
+2026-05-01T19:39:17.5960954Z === RUN   TestSQLite_EmptyDescription
+2026-05-01T19:39:17.5961796Z --- PASS: TestSQLite_EmptyDescription (0.00s)
+2026-05-01T19:39:17.5962393Z === RUN   TestSQLite_ZeroValues
+2026-05-01T19:39:17.5963122Z --- PASS: TestSQLite_ZeroValues (0.00s)
+2026-05-01T19:39:17.5963687Z === RUN   TestSQLite_LargeValues
+2026-05-01T19:39:17.5964423Z --- PASS: TestSQLite_LargeValues (0.00s)
+2026-05-01T19:39:17.5965296Z === RUN   TestSQLite_AddAndGetWaterEntry
+2026-05-01T19:39:17.5965930Z --- PASS: TestSQLite_AddAndGetWaterEntry (0.00s)
+2026-05-01T19:39:17.5966767Z === RUN   TestSQLite_MultipleWaterEntries
+2026-05-01T19:39:17.5967592Z --- PASS: TestSQLite_MultipleWaterEntries (0.00s)
+2026-05-01T19:39:17.5968241Z === RUN   TestSQLite_GetStatsRange
+2026-05-01T19:39:17.5969028Z --- PASS: TestSQLite_GetStatsRange (0.00s)
+2026-05-01T19:39:17.5969808Z === RUN   TestSQLite_SetAndGetGoal
+2026-05-01T19:39:17.5970387Z --- PASS: TestSQLite_SetAndGetGoal (0.00s)
+2026-05-01T19:39:17.5971199Z === RUN   TestSQLite_UpdateGoal
+2026-05-01T19:39:17.5971789Z --- PASS: TestSQLite_UpdateGoal (0.00s)
+2026-05-01T19:39:17.5972574Z === RUN   TestSQLite_NoGoal
+2026-05-01T19:39:17.5973280Z --- PASS: TestSQLite_NoGoal (0.00s)
+2026-05-01T19:39:17.5973842Z === RUN   TestSQLite_RemoveLastEntry
+2026-05-01T19:39:17.5974573Z --- PASS: TestSQLite_RemoveLastEntry (0.00s)
+2026-05-01T19:39:17.5975286Z === RUN   TestSQLite_RemoveLastEntry_Empty
+2026-05-01T19:39:17.5976465Z --- PASS: TestSQLite_RemoveLastEntry_Empty (0.00s)
+2026-05-01T19:39:17.5977607Z === RUN   TestSQLite_GetWaterEntriesRange
+2026-05-01T19:39:17.5978742Z --- PASS: TestSQLite_GetWaterEntriesRange (0.00s)
+2026-05-01T19:39:17.5979564Z === RUN   TestGetStatsRangeComprehensive
+2026-05-01T19:39:17.5980372Z === RUN   TestGetStatsRangeComprehensive/Today_only
+2026-05-01T19:39:17.5981730Z === RUN   TestGetStatsRangeComprehensive/Last_2_days
+2026-05-01T19:39:17.5982723Z === RUN   TestGetStatsRangeComprehensive/Last_7_days
+2026-05-01T19:39:17.5983658Z === RUN   TestGetStatsRangeComprehensive/Large_range
+2026-05-01T19:39:17.5984865Z --- PASS: TestGetStatsRangeComprehensive (0.00s)
+2026-05-01T19:39:17.5986494Z     --- PASS: TestGetStatsRangeComprehensive/Today_only (0.00s)
+2026-05-01T19:39:17.5987679Z     --- PASS: TestGetStatsRangeComprehensive/Last_2_days (0.00s)
+2026-05-01T19:39:17.5988820Z     --- PASS: TestGetStatsRangeComprehensive/Last_7_days (0.00s)
+2026-05-01T19:39:17.5989957Z     --- PASS: TestGetStatsRangeComprehensive/Large_range (0.00s)
+2026-05-01T19:39:17.5990908Z === RUN   TestGetStatsRangeBoundaryConditions
+2026-05-01T19:39:17.5992025Z --- PASS: TestGetStatsRangeBoundaryConditions (0.00s)
+2026-05-01T19:39:17.5992740Z PASS
+2026-05-01T19:39:17.5993412Z ok  	calorie-tracker/db	0.082s
+2026-05-01T19:39:17.6010896Z === RUN   TestFoodEntryCreation
+2026-05-01T19:39:17.6011582Z --- PASS: TestFoodEntryCreation (0.00s)
+2026-05-01T19:39:17.6012663Z === RUN   TestWaterEntryCreation
+2026-05-01T19:39:17.6013446Z --- PASS: TestWaterEntryCreation (0.00s)
+2026-05-01T19:39:17.6014514Z === RUN   TestDailyStatsAggregation
+2026-05-01T19:39:17.6015671Z --- PASS: TestDailyStatsAggregation (0.00s)
+2026-05-01T19:39:17.6016572Z === RUN   TestFoodPreviewCreation
+2026-05-01T19:39:17.6017154Z --- PASS: TestFoodPreviewCreation (0.00s)
+2026-05-01T19:39:17.6017737Z === RUN   TestReviewDataCreation
+2026-05-01T19:39:17.6018562Z --- PASS: TestReviewDataCreation (0.00s)
+2026-05-01T19:39:17.6019867Z === RUN   TestReviewResultCreation
+2026-05-01T19:39:17.6020719Z --- PASS: TestReviewResultCreation (0.00s)
+2026-05-01T19:39:17.6021676Z PASS
+2026-05-01T19:39:17.6022503Z ok  	calorie-tracker/models	0.002s
+2026-05-01T19:39:17.6023485Z === RUN   TestCyclomaticComplexity
+2026-05-01T19:39:17.6024993Z     ccn_test.go:69: gocyclo error: fork/exec /home/runner/go/bin/gocyclo: no such file or directory
+2026-05-01T19:39:17.6026024Z --- FAIL: TestCyclomaticComplexity (0.00s)
+2026-05-01T19:39:17.6026602Z FAIL
+2026-05-01T19:39:17.6027035Z FAIL	calorie-tracker/scripts/ccn	0.004s
+2026-05-01T19:39:27.8194378Z === RUN   TestFoodParserRemoveAccents
+2026-05-01T19:39:27.8195174Z === RUN   TestFoodParserRemoveAccents/no_accents
+2026-05-01T19:39:27.8196315Z === RUN   TestFoodParserRemoveAccents/with_accents
+2026-05-01T19:39:27.8196899Z === RUN   TestFoodParserRemoveAccents/mixed
+2026-05-01T19:39:27.8197463Z --- PASS: TestFoodParserRemoveAccents (0.00s)
+2026-05-01T19:39:27.8198221Z     --- PASS: TestFoodParserRemoveAccents/no_accents (0.00s)
+2026-05-01T19:39:27.8199037Z     --- PASS: TestFoodParserRemoveAccents/with_accents (0.00s)
+2026-05-01T19:39:27.8199822Z     --- PASS: TestFoodParserRemoveAccents/mixed (0.00s)
+2026-05-01T19:39:27.8200383Z === RUN   TestFoodParserNormalizeUnit
+2026-05-01T19:39:27.8200910Z === RUN   TestFoodParserNormalizeUnit/cup
+2026-05-01T19:39:27.8201436Z === RUN   TestFoodParserNormalizeUnit/cups
+2026-05-01T19:39:27.8201988Z === RUN   TestFoodParserNormalizeUnit/tablespoon
+2026-05-01T19:39:27.8202567Z === RUN   TestFoodParserNormalizeUnit/tablespoons
+2026-05-01T19:39:27.8203135Z === RUN   TestFoodParserNormalizeUnit/teaspoon
+2026-05-01T19:39:27.8203685Z === RUN   TestFoodParserNormalizeUnit/teaspoons
+2026-05-01T19:39:27.8204236Z === RUN   TestFoodParserNormalizeUnit/gram
+2026-05-01T19:39:27.8205028Z === RUN   TestFoodParserNormalizeUnit/grams
+2026-05-01T19:39:27.8205576Z === RUN   TestFoodParserNormalizeUnit/unit
+2026-05-01T19:39:27.8206105Z === RUN   TestFoodParserNormalizeUnit/units
+2026-05-01T19:39:27.8206640Z === RUN   TestFoodParserNormalizeUnit/unidade
+2026-05-01T19:39:27.8207185Z === RUN   TestFoodParserNormalizeUnit/ounce
+2026-05-01T19:39:27.8207726Z === RUN   TestFoodParserNormalizeUnit/ounces
+2026-05-01T19:39:27.8208261Z === RUN   TestFoodParserNormalizeUnit/pound
+2026-05-01T19:39:27.8208788Z === RUN   TestFoodParserNormalizeUnit/pounds
+2026-05-01T19:39:27.8209321Z === RUN   TestFoodParserNormalizeUnit/unknown
+2026-05-01T19:39:27.8209877Z --- PASS: TestFoodParserNormalizeUnit (0.00s)
+2026-05-01T19:39:27.8210557Z     --- PASS: TestFoodParserNormalizeUnit/cup (0.00s)
+2026-05-01T19:39:27.8211276Z     --- PASS: TestFoodParserNormalizeUnit/cups (0.00s)
+2026-05-01T19:39:27.8212040Z     --- PASS: TestFoodParserNormalizeUnit/tablespoon (0.00s)
+2026-05-01T19:39:27.8212913Z     --- PASS: TestFoodParserNormalizeUnit/tablespoons (0.00s)
+2026-05-01T19:39:27.8213708Z     --- PASS: TestFoodParserNormalizeUnit/teaspoon (0.00s)
+2026-05-01T19:39:27.8214469Z     --- PASS: TestFoodParserNormalizeUnit/teaspoons (0.00s)
+2026-05-01T19:39:27.8215472Z     --- PASS: TestFoodParserNormalizeUnit/gram (0.00s)
+2026-05-01T19:39:27.8216217Z     --- PASS: TestFoodParserNormalizeUnit/grams (0.00s)
+2026-05-01T19:39:27.8216938Z     --- PASS: TestFoodParserNormalizeUnit/unit (0.00s)
+2026-05-01T19:39:27.8217630Z     --- PASS: TestFoodParserNormalizeUnit/units (0.00s)
+2026-05-01T19:39:27.8218361Z     --- PASS: TestFoodParserNormalizeUnit/unidade (0.00s)
+2026-05-01T19:39:27.8219084Z     --- PASS: TestFoodParserNormalizeUnit/ounce (0.00s)
+2026-05-01T19:39:27.8219780Z     --- PASS: TestFoodParserNormalizeUnit/ounces (0.00s)
+2026-05-01T19:39:27.8220484Z     --- PASS: TestFoodParserNormalizeUnit/pound (0.00s)
+2026-05-01T19:39:27.8221486Z     --- PASS: TestFoodParserNormalizeUnit/pounds (0.00s)
+2026-05-01T19:39:27.8222222Z     --- PASS: TestFoodParserNormalizeUnit/unknown (0.00s)
+2026-05-01T19:39:27.8222771Z === RUN   TestFoodParserParse
+2026-05-01T19:39:27.8223221Z --- PASS: TestFoodParserParse (0.00s)
+2026-05-01T19:39:27.8223707Z === RUN   TestFoodParserParseMeal
+2026-05-01T19:39:27.8224173Z --- PASS: TestFoodParserParseMeal (0.00s)
+2026-05-01T19:39:27.8225246Z === RUN   TestLLMService_CallLLM_EmptyChoices
+2026-05-01T19:39:27.8225867Z --- PASS: TestLLMService_CallLLM_EmptyChoices (3.00s)
+2026-05-01T19:39:27.8226436Z === RUN   TestLLMService_CallLLM_NonOKStatus
+2026-05-01T19:39:27.8226980Z --- PASS: TestLLMService_CallLLM_NonOKStatus (0.00s)
+2026-05-01T19:39:27.8227550Z === RUN   TestLLMService_ParseFood_RetrySuccess
+2026-05-01T19:39:27.8228147Z --- PASS: TestLLMService_ParseFood_RetrySuccess (1.00s)
+2026-05-01T19:39:27.8228749Z === RUN   TestLLMService_AnalyzeReview_RetrySuccess
+2026-05-01T19:39:27.8229396Z --- PASS: TestLLMService_AnalyzeReview_RetrySuccess (1.00s)
+2026-05-01T19:39:27.8229982Z === RUN   TestLLMService_CleanJSON_EdgeCases
+2026-05-01T19:39:27.8230517Z --- PASS: TestLLMService_CleanJSON_EdgeCases (0.00s)
+2026-05-01T19:39:27.8231080Z === RUN   TestLLMService_AnalyzeReview_Success
+2026-05-01T19:39:27.8231656Z --- PASS: TestLLMService_AnalyzeReview_Success (0.00s)
+2026-05-01T19:39:27.8232245Z === RUN   TestLLMService_AnalyzeReview_WithMarkdown
+2026-05-01T19:39:27.8232874Z --- PASS: TestLLMService_AnalyzeReview_WithMarkdown (0.00s)
+2026-05-01T19:39:27.8233479Z === RUN   TestLLMService_CallLLM_Authorization
+2026-05-01T19:39:27.8234050Z --- PASS: TestLLMService_CallLLM_Authorization (0.00s)
+2026-05-01T19:39:27.8234608Z === RUN   TestLLMService_NoChoices
+2026-05-01T19:39:27.8235444Z --- PASS: TestLLMService_NoChoices (0.00s)
+2026-05-01T19:39:27.8235960Z === RUN   TestLLMService_ParseFood_Retry
+2026-05-01T19:39:27.8236481Z --- PASS: TestLLMService_ParseFood_Retry (2.00s)
+2026-05-01T19:39:27.8237049Z === RUN   TestLLMService_ParseFood_PermanentFailure
+2026-05-01T19:39:27.8237679Z --- PASS: TestLLMService_ParseFood_PermanentFailure (3.00s)
+2026-05-01T19:39:27.8238271Z === RUN   TestLLMService_ParseFood_TableDriven
+2026-05-01T19:39:27.8238845Z === RUN   TestLLMService_ParseFood_TableDriven/valid_response
+2026-05-01T19:39:27.8239532Z === RUN   TestLLMService_ParseFood_TableDriven/response_with_units
+2026-05-01T19:39:27.8240317Z === RUN   TestLLMService_ParseFood_TableDriven/response_with_quoted_numbers
+2026-05-01T19:39:27.8241050Z === RUN   TestLLMService_ParseFood_TableDriven/invalid_JSON
+2026-05-01T19:39:27.8241701Z === RUN   TestLLMService_ParseFood_TableDriven/missing_fields
+2026-05-01T19:39:27.8242328Z --- PASS: TestLLMService_ParseFood_TableDriven (0.00s)
+2026-05-01T19:39:27.8243159Z     --- PASS: TestLLMService_ParseFood_TableDriven/valid_response (0.00s)
+2026-05-01T19:39:27.8244136Z     --- PASS: TestLLMService_ParseFood_TableDriven/response_with_units (0.00s)
+2026-05-01T19:39:27.8245571Z     --- PASS: TestLLMService_ParseFood_TableDriven/response_with_quoted_numbers (0.00s)
+2026-05-01T19:39:27.8246597Z     --- PASS: TestLLMService_ParseFood_TableDriven/invalid_JSON (0.00s)
+2026-05-01T19:39:27.8247524Z     --- PASS: TestLLMService_ParseFood_TableDriven/missing_fields (0.00s)
+2026-05-01T19:39:27.8248258Z === RUN   TestLLMService_AnalyzeReview_TableDriven
+2026-05-01T19:39:27.8248929Z === RUN   TestLLMService_AnalyzeReview_TableDriven/valid_response
+2026-05-01T19:39:27.8249751Z === RUN   TestLLMService_AnalyzeReview_TableDriven/response_with_markdown
+2026-05-01T19:39:27.8250548Z === RUN   TestLLMService_AnalyzeReview_TableDriven/invalid_JSON
+2026-05-01T19:39:27.8251295Z === RUN   TestLLMService_AnalyzeReview_TableDriven/score_at_boundaries
+2026-05-01T19:39:27.8252017Z --- PASS: TestLLMService_AnalyzeReview_TableDriven (0.00s)
+2026-05-01T19:39:27.8252931Z     --- PASS: TestLLMService_AnalyzeReview_TableDriven/valid_response (0.00s)
+2026-05-01T19:39:27.8254004Z     --- PASS: TestLLMService_AnalyzeReview_TableDriven/response_with_markdown (0.00s)
+2026-05-01T19:39:27.8255463Z     --- PASS: TestLLMService_AnalyzeReview_TableDriven/invalid_JSON (0.00s)
+2026-05-01T19:39:27.8256518Z     --- PASS: TestLLMService_AnalyzeReview_TableDriven/score_at_boundaries (0.00s)
+2026-05-01T19:39:27.8257238Z === RUN   TestMacroCalculatorScale
+2026-05-01T19:39:27.8257758Z === RUN   TestMacroCalculatorScale/Standard_scaling_2x
+2026-05-01T19:39:27.8258363Z === RUN   TestMacroCalculatorScale/Small_scaling_0.5x
+2026-05-01T19:39:27.8259211Z === RUN   TestMacroCalculatorScale/Zero_or_negative_amount_uses_base
+2026-05-01T19:39:27.8259894Z === RUN   TestMacroCalculatorScale/Unit_based_scaling
+2026-05-01T19:39:27.8260438Z --- PASS: TestMacroCalculatorScale (0.00s)
+2026-05-01T19:39:27.8261182Z     --- PASS: TestMacroCalculatorScale/Standard_scaling_2x (0.00s)
+2026-05-01T19:39:27.8262038Z     --- PASS: TestMacroCalculatorScale/Small_scaling_0.5x (0.00s)
+2026-05-01T19:39:27.8262998Z     --- PASS: TestMacroCalculatorScale/Zero_or_negative_amount_uses_base (0.00s)
+2026-05-01T19:39:27.8263947Z     --- PASS: TestMacroCalculatorScale/Unit_based_scaling (0.00s)
+2026-05-01T19:39:27.8264575Z === RUN   TestNutritionEngine_EstimateGrams
+2026-05-01T19:39:27.8265378Z === RUN   TestNutritionEngine_EstimateGrams/default_cup
+2026-05-01T19:39:27.8266047Z === RUN   TestNutritionEngine_EstimateGrams/cup_of_rice_(override)
+2026-05-01T19:39:27.8266771Z === RUN   TestNutritionEngine_EstimateGrams/tablespoon_default
+2026-05-01T19:39:27.8267528Z === RUN   TestNutritionEngine_EstimateGrams/tablespoon_oil_(override)
+2026-05-01T19:39:27.8268268Z === RUN   TestNutritionEngine_EstimateGrams/unit_of_egg_(override)
+2026-05-01T19:39:27.8269005Z === RUN   TestNutritionEngine_EstimateGrams/unknown_unit_defaults_to_0
+2026-05-01T19:39:27.8269667Z --- PASS: TestNutritionEngine_EstimateGrams (0.00s)
+2026-05-01T19:39:27.8270450Z     --- PASS: TestNutritionEngine_EstimateGrams/default_cup (0.00s)
+2026-05-01T19:39:27.8271399Z     --- PASS: TestNutritionEngine_EstimateGrams/cup_of_rice_(override) (0.00s)
+2026-05-01T19:39:27.8272411Z     --- PASS: TestNutritionEngine_EstimateGrams/tablespoon_default (0.00s)
+2026-05-01T19:39:27.8273427Z     --- PASS: TestNutritionEngine_EstimateGrams/tablespoon_oil_(override) (0.00s)
+2026-05-01T19:39:27.8274440Z     --- PASS: TestNutritionEngine_EstimateGrams/unit_of_egg_(override) (0.00s)
+2026-05-01T19:39:27.8275778Z     --- PASS: TestNutritionEngine_EstimateGrams/unknown_unit_defaults_to_0 (0.00s)
+2026-05-01T19:39:27.8276516Z === RUN   TestNutritionEngine_HybridFlow
+2026-05-01T19:39:27.8277260Z === RUN   TestNutritionEngine_HybridFlow/Priority_1:_Reference_DB_match_with_scaling
+2026-05-01T19:39:27.8278237Z === RUN   TestNutritionEngine_HybridFlow/Natural_language_meal_resolves_without_LLM
+2026-05-01T19:39:27.8279219Z === RUN   TestNutritionEngine_HybridFlow/Priority_2:_Cache_match_(Previous_LLM_result)
+2026-05-01T19:39:27.8280240Z === RUN   TestNutritionEngine_HybridFlow/Explicit_unit_request_skips_incompatible_gram_cache
+2026-05-01T19:39:27.8281190Z === RUN   TestNutritionEngine_HybridFlow/Priority_3:_LLM_Fallback_and_caching
+2026-05-01T19:39:27.8282222Z === RUN   TestNutritionEngine_HybridFlow/Priority_3:_FatSecret_provider_resolves_and_caches_before_LLM
+2026-05-01T19:39:27.8283209Z === RUN   TestNutritionEngine_HybridFlow/Reject_unrealistic_LLM_data
+2026-05-01T19:39:27.8283885Z --- PASS: TestNutritionEngine_HybridFlow (0.00s)
+2026-05-01T19:39:27.8285155Z     --- PASS: TestNutritionEngine_HybridFlow/Priority_1:_Reference_DB_match_with_scaling (0.00s)
+2026-05-01T19:39:27.8286457Z     --- PASS: TestNutritionEngine_HybridFlow/Natural_language_meal_resolves_without_LLM (0.00s)
+2026-05-01T19:39:27.8287758Z     --- PASS: TestNutritionEngine_HybridFlow/Priority_2:_Cache_match_(Previous_LLM_result) (0.00s)
+2026-05-01T19:39:27.8289146Z     --- PASS: TestNutritionEngine_HybridFlow/Explicit_unit_request_skips_incompatible_gram_cache (0.00s)
+2026-05-01T19:39:27.8290433Z     --- PASS: TestNutritionEngine_HybridFlow/Priority_3:_LLM_Fallback_and_caching (0.00s)
+2026-05-01T19:39:27.8292016Z     --- PASS: TestNutritionEngine_HybridFlow/Priority_3:_FatSecret_provider_resolves_and_caches_before_LLM (0.00s)
+2026-05-01T19:39:27.8293305Z     --- PASS: TestNutritionEngine_HybridFlow/Reject_unrealistic_LLM_data (0.00s)
+2026-05-01T19:39:27.8294027Z === RUN   TestFatSecretProviderResolveFood
+2026-05-01T19:39:27.8294594Z --- PASS: TestFatSecretProviderResolveFood (0.00s)
+2026-05-01T19:39:27.8295384Z === RUN   TestTrackerService_NewTrackerService
+2026-05-01T19:39:27.8296133Z --- PASS: TestTrackerService_NewTrackerService (0.00s)
+2026-05-01T19:39:27.8296678Z === RUN   TestTrackerService_AddWater
+2026-05-01T19:39:27.8297191Z --- PASS: TestTrackerService_AddWater (0.00s)
+2026-05-01T19:39:27.8297710Z === RUN   TestTrackerService_SetGoal
+2026-05-01T19:39:27.8298189Z --- PASS: TestTrackerService_SetGoal (0.00s)
+2026-05-01T19:39:27.8298701Z === RUN   TestTrackerService_GetGoal_NoGoal
+2026-05-01T19:39:27.8299235Z --- PASS: TestTrackerService_GetGoal_NoGoal (0.00s)
+2026-05-01T19:39:27.8299785Z === RUN   TestTrackerService_GetGoal_WithGoal
+2026-05-01T19:39:27.8300341Z --- PASS: TestTrackerService_GetGoal_WithGoal (0.00s)
+2026-05-01T19:39:27.8300885Z === RUN   TestTrackerService_RemoveLastEntry
+2026-05-01T19:39:27.8301443Z --- PASS: TestTrackerService_RemoveLastEntry (0.00s)
+2026-05-01T19:39:27.8302030Z === RUN   TestTrackerService_GetTodayFoodEntries
+2026-05-01T19:39:27.8302638Z --- PASS: TestTrackerService_GetTodayFoodEntries (0.00s)
+2026-05-01T19:39:27.8303254Z === RUN   TestTrackerService_GetFoodEntriesRange
+2026-05-01T19:39:27.8303855Z --- PASS: TestTrackerService_GetFoodEntriesRange (0.00s)
+2026-05-01T19:39:27.8304411Z === RUN   TestTrackerService_GetDailyStats
+2026-05-01T19:39:27.8305184Z --- PASS: TestTrackerService_GetDailyStats (0.00s)
+2026-05-01T19:39:27.8305698Z === RUN   TestTrackerService_SaveFood
+2026-05-01T19:39:27.8306177Z --- PASS: TestTrackerService_SaveFood (0.00s)
+2026-05-01T19:39:27.8306711Z === RUN   TestTrackerService_ParseFood_CacheFirst
+2026-05-01T19:39:27.8307329Z --- PASS: TestTrackerService_ParseFood_CacheFirst (0.00s)
+2026-05-01T19:39:27.8307965Z === RUN   TestTrackerService_ParseFood_LLMFallback
+2026-05-01T19:39:27.8308590Z --- PASS: TestTrackerService_ParseFood_LLMFallback (0.00s)
+2026-05-01T19:39:27.8309184Z === RUN   TestTrackerService_RunReview_Success
+2026-05-01T19:39:27.8309760Z --- PASS: TestTrackerService_RunReview_Success (0.00s)
+2026-05-01T19:39:27.8310336Z === RUN   TestTrackerService_RunReview_NoGoal
+2026-05-01T19:39:27.8310906Z --- PASS: TestTrackerService_RunReview_NoGoal (0.00s)
+2026-05-01T19:39:27.8311524Z === RUN   TestTrackerService_DailyStatsDateFormatting
+2026-05-01T19:39:27.8312184Z --- PASS: TestTrackerService_DailyStatsDateFormatting (0.00s)
+2026-05-01T19:39:27.8312863Z === RUN   TestTrackerService_ErrorHandling_AddFoodEntry
+2026-05-01T19:39:27.8313527Z --- PASS: TestTrackerService_ErrorHandling_AddFoodEntry (0.00s)
+2026-05-01T19:39:27.8314210Z === RUN   TestTrackerService_ErrorHandling_GetLatestGoal
+2026-05-01T19:39:27.8315120Z --- PASS: TestTrackerService_ErrorHandling_GetLatestGoal (0.00s)
+2026-05-01T19:39:27.8315651Z PASS
+2026-05-01T19:39:27.8315967Z ok  	calorie-tracker/services	10.030s
+2026-05-01T19:39:27.8316421Z === RUN   TestFullFoodTrackingFlow
+2026-05-01T19:39:27.8316886Z --- PASS: TestFullFoodTrackingFlow (0.00s)
+2026-05-01T19:39:27.8317353Z === RUN   TestWaterTrackingFlow
+2026-05-01T19:39:27.8317785Z --- PASS: TestWaterTrackingFlow (0.00s)
+2026-05-01T19:39:27.8318230Z === RUN   TestGoalSettingFlow
+2026-05-01T19:39:27.8318645Z --- PASS: TestGoalSettingFlow (0.00s)
+2026-05-01T19:39:27.8319112Z === RUN   TestDailyStatsAggregationFlow
+2026-05-01T19:39:27.8319630Z --- PASS: TestDailyStatsAggregationFlow (0.00s)
+2026-05-01T19:39:27.8320125Z === RUN   TestUndoLastEntryFlow
+2026-05-01T19:39:27.8320534Z --- PASS: TestUndoLastEntryFlow (0.00s)
+2026-05-01T19:39:27.8320974Z === RUN   TestMultipleDaysStatsFlow
+2026-05-01T19:39:27.8321439Z --- PASS: TestMultipleDaysStatsFlow (0.00s)
+2026-05-01T19:39:27.8321867Z PASS
+2026-05-01T19:39:27.8322174Z ok  	calorie-tracker/tests	0.017s
+2026-05-01T19:39:27.8322854Z === RUN   TestNewModel
+2026-05-01T19:39:27.8323218Z --- PASS: TestNewModel (0.00s)
+2026-05-01T19:39:27.8323628Z === RUN   TestView_DashboardView
+2026-05-01T19:39:27.8324063Z --- PASS: TestView_DashboardView (0.00s)
+2026-05-01T19:39:27.8324506Z === RUN   TestView_AddFoodView
+2026-05-01T19:39:27.8325117Z --- PASS: TestView_AddFoodView (0.00s)
+2026-05-01T19:39:27.8325551Z === RUN   TestView_AddWaterView
+2026-05-01T19:39:27.8325970Z --- PASS: TestView_AddWaterView (0.00s)
+2026-05-01T19:39:27.8326786Z === RUN   TestView_ReviewView_WithReview
+2026-05-01T19:39:27.8327306Z --- PASS: TestView_ReviewView_WithReview (0.00s)
+2026-05-01T19:39:27.8327795Z === RUN   TestView_ReviewView_NoReview
+2026-05-01T19:39:27.8328276Z --- PASS: TestView_ReviewView_NoReview (0.00s)
+2026-05-01T19:39:27.8328762Z === RUN   TestView_ConfirmFoodView
+2026-05-01T19:39:27.8329212Z --- PASS: TestView_ConfirmFoodView (0.00s)
+2026-05-01T19:39:27.8329673Z === RUN   TestView_TodayLogView
+2026-05-01T19:39:27.8330090Z --- PASS: TestView_TodayLogView (0.00s)
+2026-05-01T19:39:27.8330524Z === RUN   TestView_WeekLogView
+2026-05-01T19:39:27.8330923Z --- PASS: TestView_WeekLogView (0.00s)
+2026-05-01T19:39:27.8331358Z === RUN   TestView_MonthLogView
+2026-05-01T19:39:27.8331765Z --- PASS: TestView_MonthLogView (0.00s)
+2026-05-01T19:39:27.8332191Z === RUN   TestView_SetGoalView
+2026-05-01T19:39:27.8332604Z --- PASS: TestView_SetGoalView (0.00s)
+2026-05-01T19:39:27.8333049Z === RUN   TestView_EditFoodPreviewView
+2026-05-01T19:39:27.8333541Z --- PASS: TestView_EditFoodPreviewView (0.00s)
+2026-05-01T19:39:27.8334020Z === RUN   TestView_Loading
+2026-05-01T19:39:27.8334408Z --- PASS: TestView_Loading (0.00s)
+2026-05-01T19:39:27.8335003Z === RUN   TestView_Error
+2026-05-01T19:39:27.8335387Z --- PASS: TestView_Error (0.00s)
+2026-05-01T19:39:27.8335873Z === RUN   TestRenderGoalComparison_WithCalorieGoal
+2026-05-01T19:39:27.8336502Z --- PASS: TestRenderGoalComparison_WithCalorieGoal (0.00s)
+2026-05-01T19:39:27.8337114Z === RUN   TestRenderGoalComparison_WithWeightGoal
+2026-05-01T19:39:27.8337731Z --- PASS: TestRenderGoalComparison_WithWeightGoal (0.00s)
+2026-05-01T19:39:27.8338309Z === RUN   TestRenderGoalComparison_NoMatch
+2026-05-01T19:39:27.8338833Z --- PASS: TestRenderGoalComparison_NoMatch (0.00s)
+2026-05-01T19:39:27.8339376Z === RUN   TestRenderTodayLogString_WithEntries
+2026-05-01T19:39:27.8339945Z --- PASS: TestRenderTodayLogString_WithEntries (0.00s)
+2026-05-01T19:39:27.8340490Z === RUN   TestRenderTodayLogString_Empty
+2026-05-01T19:39:27.8341019Z --- PASS: TestRenderTodayLogString_Empty (0.00s)
+2026-05-01T19:39:27.8341563Z === RUN   TestRenderWeekLogString_WithEntries
+2026-05-01T19:39:27.8342124Z --- PASS: TestRenderWeekLogString_WithEntries (0.00s)
+2026-05-01T19:39:27.8342627Z === RUN   TestRenderWeekLogString_Empty
+2026-05-01T19:39:27.8343129Z --- PASS: TestRenderWeekLogString_Empty (0.00s)
+2026-05-01T19:39:27.8343647Z === RUN   TestRenderReviewString_WithReview
+2026-05-01T19:39:27.8344183Z --- PASS: TestRenderReviewString_WithReview (0.00s)
+2026-05-01T19:39:27.8344888Z === RUN   TestRenderReviewString_NoReview
+2026-05-01T19:39:27.8345414Z --- PASS: TestRenderReviewString_NoReview (0.00s)
+2026-05-01T19:39:27.8345913Z === RUN   TestIsLogOrReviewView
+2026-05-01T19:39:27.8346355Z --- PASS: TestIsLogOrReviewView (0.00s)
+2026-05-01T19:39:27.8346827Z === RUN   TestHandleDashboardKeys_Quit
+2026-05-01T19:39:27.8347326Z --- PASS: TestHandleDashboardKeys_Quit (0.00s)
+2026-05-01T19:39:27.8347833Z === RUN   TestHandleDashboardKeys_AddFood
+2026-05-01T19:39:27.8348360Z --- PASS: TestHandleDashboardKeys_AddFood (0.00s)
+2026-05-01T19:39:27.8348894Z === RUN   TestHandleDashboardKeys_AddWater
+2026-05-01T19:39:27.8349440Z --- PASS: TestHandleDashboardKeys_AddWater (0.00s)
+2026-05-01T19:39:27.8349997Z === RUN   TestHandleDashboardKeys_Review
+2026-05-01T19:39:27.8350531Z --- PASS: TestHandleDashboardKeys_Review (0.00s)
+2026-05-01T19:39:27.8351057Z === RUN   TestHandleDashboardKeys_Today
+2026-05-01T19:39:27.8351579Z --- PASS: TestHandleDashboardKeys_Today (0.00s)
+2026-05-01T19:39:27.8352292Z === RUN   TestHandleDashboardKeys_Week
+2026-05-01T19:39:27.8352803Z --- PASS: TestHandleDashboardKeys_Week (0.00s)
+2026-05-01T19:39:27.8353333Z === RUN   TestHandleDashboardKeys_Month
+2026-05-01T19:39:27.8353860Z --- PASS: TestHandleDashboardKeys_Month (0.00s)
+2026-05-01T19:39:27.8354368Z === RUN   TestHandleDashboardKeys_Goal
+2026-05-01T19:39:27.8355098Z --- PASS: TestHandleDashboardKeys_Goal (0.00s)
+2026-05-01T19:39:27.8355790Z === RUN   TestHandleDashboardKeys_Undo
+2026-05-01T19:39:27.8356325Z --- PASS: TestHandleDashboardKeys_Undo (0.00s)
+2026-05-01T19:39:27.8356795Z === RUN   TestInit
+2026-05-01T19:39:27.8357145Z --- PASS: TestInit (0.00s)
+2026-05-01T19:39:27.8357564Z === RUN   TestHandleLogViewKeys_Quit
+2026-05-01T19:39:27.8358059Z --- PASS: TestHandleLogViewKeys_Quit (0.00s)
+2026-05-01T19:39:27.8358565Z === RUN   TestHandleLogViewKeys_Dashboard
+2026-05-01T19:39:27.8359084Z --- PASS: TestHandleLogViewKeys_Dashboard (0.00s)
+2026-05-01T19:39:27.8359609Z === RUN   TestHandleInputModeKeys_Quit
+2026-05-01T19:39:27.8360117Z --- PASS: TestHandleInputModeKeys_Quit (0.00s)
+2026-05-01T19:39:27.8360627Z === RUN   TestHandleInputModeKeys_Escape
+2026-05-01T19:39:27.8361141Z --- PASS: TestHandleInputModeKeys_Escape (0.00s)
+2026-05-01T19:39:27.8361667Z === RUN   TestHandleConfirmFoodKeys_Confirm
+2026-05-01T19:39:27.8362215Z --- PASS: TestHandleConfirmFoodKeys_Confirm (0.00s)
+2026-05-01T19:39:27.8362779Z === RUN   TestHandleConfirmFoodKeys_Discard
+2026-05-01T19:39:27.8363341Z --- PASS: TestHandleConfirmFoodKeys_Discard (0.00s)
+2026-05-01T19:39:27.8363873Z === RUN   TestHandleConfirmFoodKeys_Edit
+2026-05-01T19:39:27.8364383Z --- PASS: TestHandleConfirmFoodKeys_Edit (0.00s)
+2026-05-01T19:39:27.8365417Z === RUN   TestHandleEditPreviewKeys_Next
+2026-05-01T19:39:27.8365876Z --- PASS: TestHandleEditPreviewKeys_Next (0.00s)
+2026-05-01T19:39:27.8366316Z === RUN   TestHandleEditPreviewKeys_Cancel
+2026-05-01T19:39:27.8366742Z --- PASS: TestHandleEditPreviewKeys_Cancel (0.00s)
+2026-05-01T19:39:27.8367158Z === RUN   TestUpdateViewportContent
+2026-05-01T19:39:27.8367535Z --- PASS: TestUpdateViewportContent (0.00s)
+2026-05-01T19:39:27.8367910Z === RUN   TestSetupEditInput
+2026-05-01T19:39:27.8387942Z --- PASS: TestSetupEditInput (0.00s)
+2026-05-01T19:39:27.8389093Z === RUN   TestUpdatePendingFoodFromEdit
+2026-05-01T19:39:27.8389664Z --- PASS: TestUpdatePendingFoodFromEdit (0.00s)
+2026-05-01T19:39:27.8390176Z === RUN   TestNoOpCmd
+2026-05-01T19:39:27.8390410Z --- PASS: TestNoOpCmd (0.00s)
+2026-05-01T19:39:27.8390645Z PASS
+2026-05-01T19:39:27.8390835Z ok  	calorie-tracker/tui	0.007s
+2026-05-01T19:39:27.8391075Z === RUN   TestFormatDate
+2026-05-01T19:39:27.8391310Z === RUN   TestFormatDate/standard_date
+2026-05-01T19:39:27.8391577Z === RUN   TestFormatDate/another_date
+2026-05-01T19:39:27.8391827Z === RUN   TestFormatDate/zero_time
+2026-05-01T19:39:27.8392084Z --- PASS: TestFormatDate (0.00s)
+2026-05-01T19:39:27.8392407Z     --- PASS: TestFormatDate/standard_date (0.00s)
+2026-05-01T19:39:27.8392763Z     --- PASS: TestFormatDate/another_date (0.00s)
+2026-05-01T19:39:27.8393109Z     --- PASS: TestFormatDate/zero_time (0.00s)
+2026-05-01T19:39:27.8393381Z === RUN   TestBeginningOfDay
+2026-05-01T19:39:27.8393618Z --- PASS: TestBeginningOfDay (0.00s)
+2026-05-01T19:39:27.8393848Z PASS
+2026-05-01T19:39:27.8394033Z ok  	calorie-tracker/utils	0.003s
+2026-05-01T19:39:27.8394254Z FAIL
+2026-05-01T19:39:27.8719070Z ##[error]Process completed with exit code 1.
+2026-05-01T19:39:27.8818529Z Post job cleanup.
+2026-05-01T19:39:27.9808381Z [command]/usr/bin/git version
+2026-05-01T19:39:27.9843949Z git version 2.53.0
+2026-05-01T19:39:27.9888359Z Temporarily overriding HOME='/home/runner/work/_temp/0f433b3e-e813-43fc-b10f-d91f308a3551' before making global git config changes
+2026-05-01T19:39:27.9889769Z Adding repository directory to the temporary git global config as a safe directory
+2026-05-01T19:39:27.9901478Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/calorie-tracker/calorie-tracker
+2026-05-01T19:39:27.9935579Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-05-01T19:39:27.9968704Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-05-01T19:39:28.0189111Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-05-01T19:39:28.0209104Z http.https://github.com/.extraheader
+2026-05-01T19:39:28.0221149Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-05-01T19:39:28.0250291Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-05-01T19:39:28.0472079Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-05-01T19:39:28.0505467Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-05-01T19:39:28.0876690Z Cleaning up orphan processes
+2026-05-01T19:39:28.1157579Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/setup-go@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
