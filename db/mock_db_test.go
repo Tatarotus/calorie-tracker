@@ -82,7 +82,10 @@ func TestMockDB_GetDailyFoodEntries(t *testing.T) {
 		Description: "Test",
 		Timestamp:   now,
 	}
-	db.AddFoodEntry(entry)
+	err := db.AddFoodEntry(entry)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries, err := db.GetDailyFoodEntries(now)
 	if err != nil {
@@ -100,7 +103,10 @@ func TestMockDB_GetDailyFoodEntries_DifferentDate(t *testing.T) {
 		Description: "Test",
 		Timestamp:   now,
 	}
-	db.AddFoodEntry(entry)
+	err := db.AddFoodEntry(entry)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	yesterday := now.AddDate(0, 0, -1)
 	entries, err := db.GetDailyFoodEntries(yesterday)
@@ -114,8 +120,14 @@ func TestMockDB_GetDailyFoodEntries_DifferentDate(t *testing.T) {
 
 func TestMockDB_GetFoodEntriesRange(t *testing.T) {
 	db := NewMockDB()
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	err := db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries, err := db.GetFoodEntriesRange(7)
 	if err != nil {
@@ -185,7 +197,10 @@ func TestMockDB_GetDailyWaterEntries(t *testing.T) {
 		AmountML:  250,
 		Timestamp: now,
 	}
-	db.AddWaterEntry(entry)
+	err := db.AddWaterEntry(entry)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries, err := db.GetDailyWaterEntries(now)
 	if err != nil {
@@ -198,8 +213,14 @@ func TestMockDB_GetDailyWaterEntries(t *testing.T) {
 
 func TestMockDB_GetWaterEntriesRange(t *testing.T) {
 	db := NewMockDB()
-	db.AddWaterEntry(models.WaterEntry{AmountML: 250})
-	db.AddWaterEntry(models.WaterEntry{AmountML: 500})
+	err := db.AddWaterEntry(models.WaterEntry{AmountML: 250})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddWaterEntry(models.WaterEntry{AmountML: 500})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries, err := db.GetWaterEntriesRange(7)
 	if err != nil {
@@ -214,17 +235,23 @@ func TestMockDB_GetStatsRange(t *testing.T) {
 	db := NewMockDB()
 	now := time.Now()
 
-	db.AddFoodEntry(models.FoodEntry{
+	err := db.AddFoodEntry(models.FoodEntry{
 		Calories:  100,
 		Protein:   5,
 		Carbs:     20,
 		Fat:       2,
 		Timestamp: now,
 	})
-	db.AddWaterEntry(models.WaterEntry{
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddWaterEntry(models.WaterEntry{
 		AmountML:  250,
 		Timestamp: now,
 	})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	stats, err := db.GetStatsRange(7)
 	if err != nil {
