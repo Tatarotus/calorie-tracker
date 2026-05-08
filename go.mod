@@ -1,6 +1,6 @@
 module calorie-tracker
 
-go 1.23.0
+go 1.26
 
 require (
 	github.com/charmbracelet/bubbles v0.18.0

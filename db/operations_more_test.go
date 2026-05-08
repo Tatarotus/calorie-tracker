@@ -12,7 +12,9 @@ func TestDB_GetReferenceFood_PartialMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	// Seed a reference food - the LIKE query uses the input as the pattern
 	// and matches against the stored name. So "arroz branco" should match
@@ -31,7 +33,9 @@ func TestDB_GetReferenceFood_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	ref, err := db.GetReferenceFood("nonexistentfood123")
 	if err != nil {
@@ -42,7 +46,7 @@ func TestDB_GetReferenceFood_NotFound(t *testing.T) {
 	}
 }
 
-func TestDB_GetDailyFoodEntries_MultipleDays(t *testing.T) {
+func TestDB_GetDailyFoodEntries(t *testing.T) {
 	db, err := NewTestDB(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)

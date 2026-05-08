@@ -8,20 +8,13 @@ import (
 	"calorie-tracker/models"
 )
 
+// Food operations
+
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
 		entry.Timestamp.UTC().Format(time.RFC3339Nano),
 		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
-	)
-	return err
-}
-
-func (db *DB) AddWaterEntry(entry models.WaterEntry) error {
-	_, err := db.conn.Exec(
-		"INSERT INTO water_entries (timestamp, amount_ml) VALUES (?, ?)",
-		entry.Timestamp.UTC().Format(time.RFC3339Nano),
-		entry.AmountML,
 	)
 	return err
 }
@@ -40,9 +33,7 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = rows.Close()
-	}()
+	defer rows.Close()
 
 	var entries []models.FoodEntry
 	for rows.Next() {
@@ -55,6 +46,118 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 		entries = append(entries, e)
 	}
 	return entries, nil
+}
+
+func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
+
+	rows, err := db.conn.Query(
+		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
+		rangeStartUTC.Format(time.RFC3339Nano),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.FoodEntry
+	for rows.Next() {
+		var e models.FoodEntry
+		var ts string
+		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+			return nil, err
+		}
+		e.Timestamp = parseTimestamp(ts).Local()
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
+func (db *DB) CacheFood(f models.ReferenceFood) error {
+	description := strings.ToLower(strings.TrimSpace(f.Name))
+	_, err := db.conn.Exec(
+		"INSERT OR REPLACE INTO food_cache (description, base_quantity, unit, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		description, f.BaseQuantity, f.Unit, f.Macros.Calories, f.Macros.Protein, f.Macros.Carbs, f.Macros.Fat,
+	)
+	return err
+}
+
+func (db *DB) GetCachedFood(description string) (*models.ReferenceFood, error) {
+	description = strings.ToLower(strings.TrimSpace(description))
+	var f models.ReferenceFood
+	err := db.conn.QueryRow(
+		"SELECT base_quantity, unit, calories, protein, carbs, fat FROM food_cache WHERE description = ?",
+		description,
+	).Scan(&f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	f.Name = description
+	return &f, nil
+}
+
+func (db *DB) GetAllCacheEntries() ([]models.ReferenceFood, error) {
+	rows, err := db.conn.Query("SELECT description, base_quantity, unit, calories, protein, carbs, fat FROM food_cache")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.ReferenceFood
+	for rows.Next() {
+		var f models.ReferenceFood
+		if err := rows.Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat); err != nil {
+			return nil, err
+		}
+		entries = append(entries, f)
+	}
+	return entries, nil
+}
+
+func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	var f models.ReferenceFood
+	err := db.conn.QueryRow(
+		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ?",
+		name,
+	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
+
+	if err == nil {
+		return &f, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	err = db.conn.QueryRow(
+		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE ? LIKE '%' || name || '%'",
+		name,
+	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// Water operations
+
+func (db *DB) AddWaterEntry(entry models.WaterEntry) error {
+	_, err := db.conn.Exec(
+		"INSERT INTO water_entries (timestamp, amount_ml) VALUES (?, ?)",
+		entry.Timestamp.UTC().Format(time.RFC3339Nano),
+		entry.AmountML,
+	)
+	return err
 }
 
 func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
@@ -71,9 +174,7 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		_ = rows.Close()
-	}()
+	defer rows.Close()
 
 	var entries []models.WaterEntry
 	for rows.Next() {
@@ -87,6 +188,35 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 	}
 	return entries, nil
 }
+
+func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
+
+	rows, err := db.conn.Query(
+		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
+		rangeStartUTC.Format(time.RFC3339Nano),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []models.WaterEntry
+	for rows.Next() {
+		var e models.WaterEntry
+		var ts string
+		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
+			return nil, err
+		}
+		e.Timestamp = parseTimestamp(ts).Local()
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
+// Stats operations
 
 func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	now := time.Now()
@@ -152,138 +282,12 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	return result, nil
 }
 
-func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
-	now := time.Now()
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
-
-	rows, err := db.conn.Query(
-		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
-		rangeStartUTC.Format(time.RFC3339Nano),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []models.FoodEntry
-	for rows.Next() {
-		var e models.FoodEntry
-		var ts string
-		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
-			return nil, err
-		}
-		e.Timestamp = parseTimestamp(ts).Local()
-		entries = append(entries, e)
-	}
-	return entries, nil
-}
-
-func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
-	now := time.Now()
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
-
-	rows, err := db.conn.Query(
-		"SELECT id, timestamp, amount_ml FROM water_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
-		rangeStartUTC.Format(time.RFC3339Nano),
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []models.WaterEntry
-	for rows.Next() {
-		var e models.WaterEntry
-		var ts string
-		if err := rows.Scan(&e.ID, &ts, &e.AmountML); err != nil {
-			return nil, err
-		}
-		e.Timestamp = parseTimestamp(ts).Local()
-		entries = append(entries, e)
-	}
-	return entries, nil
-}
-
-func (db *DB) GetCachedFood(description string) (*models.ReferenceFood, error) {
-	description = strings.ToLower(strings.TrimSpace(description))
-	var f models.ReferenceFood
-	err := db.conn.QueryRow(
-		"SELECT base_quantity, unit, calories, protein, carbs, fat FROM food_cache WHERE description = ?",
-		description,
-	).Scan(&f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	f.Name = description
-	return &f, nil
-}
-
-func (db *DB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
-	name = strings.ToLower(strings.TrimSpace(name))
-	var f models.ReferenceFood
-	err := db.conn.QueryRow(
-		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE name = ?",
-		name,
-	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
-
-	if err == nil {
-		return &f, nil
-	}
-	if err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	err = db.conn.QueryRow(
-		"SELECT name, base_quantity, unit, calories, protein, carbs, fat FROM reference_foods WHERE ? LIKE '%' || name || '%'",
-		name,
-	).Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &f, nil
-}
-
-func (db *DB) CacheFood(f models.ReferenceFood) error {
-	description := strings.ToLower(strings.TrimSpace(f.Name))
-	_, err := db.conn.Exec(
-		"INSERT OR REPLACE INTO food_cache (description, base_quantity, unit, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		description, f.BaseQuantity, f.Unit, f.Macros.Calories, f.Macros.Protein, f.Macros.Carbs, f.Macros.Fat,
-	)
-	return err
-}
-
-func (db *DB) GetAllCacheEntries() ([]models.ReferenceFood, error) {
-	rows, err := db.conn.Query("SELECT description, base_quantity, unit, calories, protein, carbs, fat FROM food_cache")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries []models.ReferenceFood
-	for rows.Next() {
-		var f models.ReferenceFood
-		if err := rows.Scan(&f.Name, &f.BaseQuantity, &f.Unit, &f.Macros.Calories, &f.Macros.Protein, &f.Macros.Carbs, &f.Macros.Fat); err != nil {
-			return nil, err
-		}
-		entries = append(entries, f)
-	}
-	return entries, nil
-}
+// Goal operations
 
 func (db *DB) SetGoal(goal models.Goal) error {
 	_, err := db.conn.Exec(
 		"INSERT INTO goals (timestamp, description) VALUES (?, ?)",
-		goal.Timestamp.Format(time.RFC3339Nano),
+		goal.Timestamp.UTC().Format(time.RFC3339Nano),
 		goal.Description,
 	)
 	return err
@@ -302,9 +306,11 @@ func (db *DB) GetLatestGoal() (*models.Goal, error) {
 	if err != nil {
 		return nil, err
 	}
-	g.Timestamp = parseTimestamp(ts)
+	g.Timestamp = parseTimestamp(ts).Local()
 	return &g, nil
 }
+
+// Other operations
 
 func (db *DB) RemoveLastEntry() error {
 	var entryType string
@@ -338,5 +344,8 @@ func (db *DB) RemoveLastEntry() error {
 }
 
 func (db *DB) Close() error {
+	if db.conn == nil {
+		return nil
+	}
 	return db.conn.Close()
 }
