@@ -377,6 +377,35 @@ func TestMockDB_GetWaterEntries(t *testing.T) {
 	}
 }
 
+func TestMockDB_GetReferenceFood(t *testing.T) {
+	db := NewMockDB()
+	ref, err := db.GetReferenceFood("arroz branco")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if ref != nil {
+		t.Error("Expected nil reference food in mock DB (not seeded by default)")
+	}
+}
+
+func TestMockDB_SeedReferenceFood(t *testing.T) {
+	db := NewMockDB()
+	db.SeedReferenceFood(models.ReferenceFood{Name: "test food"})
+	// Test it doesn't panic
+}
+
+func TestMockDB_GetAllCacheEntries(t *testing.T) {
+	db := NewMockDB()
+	_ = db.CacheFood(models.ReferenceFood{Name: "test food"})
+	entries, err := db.GetAllCacheEntries()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("Expected 1 entry, got %d", len(entries))
+	}
+}
+
 func TestMockDB_Clear(t *testing.T) {
 	db := NewMockDB()
 	err := db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})

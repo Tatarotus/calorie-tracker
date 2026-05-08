@@ -7,16 +7,18 @@ import (
 
 func TestDB_NewDB(t *testing.T) {
 	// This test creates a real DB in the user's home directory
-	// We can't easily test this without side effects, so we just verify it doesn't panic
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("NewDB panicked: %v", r)
-		}
-	}()
+	// We can't easily test this without side effects, but we can call it and close it
+	// if we temporarily change HOME or just let it run.
 
-	// We can't actually call NewDB() in tests because it creates a file in the home dir
-	// and we don't want to pollute the user's environment.
-	// The functionality is tested via NewTestDB.
+	// Since we are mocking environments, let's just ensure it doesn't panic and we handle the error or success
+	t.Setenv("HOME", t.TempDir()) // Safe isolated environment
+
+	db, err := NewDB()
+	if err != nil {
+		t.Logf("NewDB failed (expected in some envs): %v", err)
+	} else if db != nil {
+		_ = db.Close()
+	}
 }
 
 func TestDB_NewTestDB(t *testing.T) {

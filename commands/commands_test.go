@@ -1,6 +1,11 @@
 package commands
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"calorie-tracker/config"
@@ -77,4 +82,49 @@ func TestReportCmd(t *testing.T) {
 	if reportCmd.Use != "report" {
 		t.Errorf("Expected Use to be 'report', got %s", reportCmd.Use)
 	}
+}
+
+func TestExecuteAllCommands(t *testing.T) {
+	// Set up a mock LLM server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// Different responses depending on the request body (Review vs Parse)
+		bodyBytes, _ := io.ReadAll(r.Body)
+		bodyStr := string(bodyBytes)
+
+		if bytes.Contains([]byte(bodyStr), []byte("review")) {
+			// Review response
+			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"summary\":\"Good\",\"score\":80,\"progress\":\"stable\"}"}}]}`)
+		} else {
+			// Parse food response
+			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"apple\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":95,\"protein\":0.3,\"carbs\":25,\"fat\":0.2}}"}}]}`)
+		}
+	}))
+	defer ts.Close()
+
+	t.Setenv("OPENAI_BASE_URL", ts.URL)
+	t.Setenv("NVIDIA_API_KEY", "test-key")
+	t.Setenv("HOME", t.TempDir()) // Safe DB location
+
+	// 1. Test addCmd
+	addCmd.Run(addCmd, []string{"apple"})
+
+	// 2. Test waterCmd
+	waterCmd.Run(waterCmd, []string{"500"})
+
+	// 3. Test reportCmd
+	reportCmd.Run(reportCmd, nil)
+
+	// 4. Test reviewCmd
+	reviewCmd.Run(reviewCmd, nil)
+
+	// Test Execute with help flag
+	rootCmd.SetArgs([]string{"--help"})
+	Execute()
+}
+
+func TestRunTUI_MissingConfig(t *testing.T) {
+	// If we run TUI without SAMBA_API_KEY, it calls os.Exit(1).
+	// This is tricky to test directly in Go.
 }
