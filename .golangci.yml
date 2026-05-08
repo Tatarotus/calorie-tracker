@@ -1,32 +1,51 @@
 version: "2"
 
 run:
-  timeout: 5m
+  # Paths are relative to the config file by default in v2
+  relative-path-mode: cfg
 
 linters:
   default: none
   enable:
+    - errcheck
+    - gocyclo
     - govet
+    - ineffassign
     - staticcheck
     - unused
-    - ineffassign
-    - gocyclo
-    - errcheck
-
-linters-settings:
-  gocyclo:
-    min-complexity: 20
-  govet:
-    enable-all: true
+  settings:
+    gocyclo:
+      min-complexity: 20
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - unusedwrite
+        - shadow
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+        path: config/config_test.go
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
 
 formatters:
   enable:
     - goimports
-
-issues:
-  exclude-dirs:
-    - vendor
-  exclude-rules:
-    - path: "config/config_test.go"
-      linters:
-        - errcheck
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
