@@ -89,7 +89,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 
 	t.Run("Priority 2: Cache match (Previous LLM result)", func(t *testing.T) {
 		// Mock cache entry
-		mockDB.CacheFood(models.ReferenceFood{
+		_ = mockDB.CacheFood(models.ReferenceFood{
 			Name:         "pao integral",
 			BaseQuantity: 50,
 			Unit:         "gram",
@@ -111,7 +111,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 	})
 
 	t.Run("Explicit unit request skips incompatible gram cache", func(t *testing.T) {
-		mockDB.CacheFood(models.ReferenceFood{
+		_ = mockDB.CacheFood(models.ReferenceFood{
 			Name:         "pao frances",
 			BaseQuantity: 100,
 			Unit:         "gram",
@@ -121,7 +121,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 		})
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"pao frances\",\"base_quantity\":1,\"unit\":\"unit\",\"macros\":{\"calories\":135,\"protein\":4.5,\"carbs\":28,\"fat\":1.5}}"}}]}`)
+			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"pao frances\",\"base_quantity\":1,\"unit\":\"unit\",\"macros\":{\"calories\":135,\"protein\":4.5,\"carbs\":28,\"fat\":1.5}}"}}]}`)
 		}))
 		defer ts.Close()
 
@@ -150,7 +150,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 	t.Run("Priority 3: LLM Fallback and caching", func(t *testing.T) {
 		// Mock LLM server
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"fruta magica\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":50,\"protein\":1,\"carbs\":10,\"fat\":0}}"}}]}`)
+			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"fruta magica\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":50,\"protein\":1,\"carbs\":10,\"fat\":0}}"}}]}`)
 		}))
 		defer ts.Close()
 
@@ -214,7 +214,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 
 	t.Run("Reject unrealistic LLM data", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"bad\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":10000,\"protein\":0,\"carbs\":0,\"fat\":0}}"}}]}`)
+			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"bad\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":10000,\"protein\":0,\"carbs\":0,\"fat\":0}}"}}]}`)
 		}))
 		defer ts.Close()
 
@@ -257,7 +257,7 @@ func TestFatSecretProviderResolveFood(t *testing.T) {
 		if r.Form.Get("scope") != "basic" {
 			t.Errorf("expected basic scope, got %q", r.Form.Get("scope"))
 		}
-		fmt.Fprintln(w, `{"access_token":"test-token","token_type":"Bearer","expires_in":3600}`)
+		_, _ = fmt.Fprintln(w, `{"access_token":"test-token","token_type":"Bearer","expires_in":3600}`)
 	}))
 	defer tokenServer.Close()
 

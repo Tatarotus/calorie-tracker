@@ -11,15 +11,15 @@ func TestGetStatsRangeComprehensive(t *testing.T) {
 
 	now := time.Now()
 	// Add entries for different days
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Timestamp: now,
 		Calories:  1000,
 	})
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Timestamp: now.AddDate(0, 0, -5),
 		Calories:  500,
 	})
-	mockDB.AddWaterEntry(models.WaterEntry{
+	_ = mockDB.AddWaterEntry(models.WaterEntry{
 		Timestamp: now.AddDate(0, 0, -2),
 		AmountML:  1000,
 	})

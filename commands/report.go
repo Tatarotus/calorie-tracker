@@ -13,7 +13,7 @@ var reportCmd = &cobra.Command{
 	Short: "View your daily stats",
 	Run: func(cmd *cobra.Command, args []string) {
 		database, tracker := initDBAndTracker()
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		stats, err := tracker.GetDailyStats(time.Now())
 		if err != nil {

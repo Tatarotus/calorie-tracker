@@ -23,7 +23,7 @@ func TestLLMService_AnalyzeReview_Success(t *testing.T) {
 		// Properly escape the JSON string
 		escapedContent, _ := json.Marshal(jsonResp)
 		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
 
@@ -68,7 +68,7 @@ func TestLLMService_AnalyzeReview_WithMarkdown(t *testing.T) {
 		markdownResp := "Analysis:\n```json\n" + jsonResp + "\n```\nDone"
 		escapedContent, _ := json.Marshal(markdownResp)
 		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
 
@@ -99,7 +99,7 @@ func TestLLMService_CallLLM_Authorization(t *testing.T) {
 		authHeader = r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"choices": [{"message": {"content": "test"}}]}`))
+		_, _ = w.Write([]byte(`{"choices": [{"message": {"content": "test"}}]}`))
 	}))
 	defer server.Close()
 
@@ -123,7 +123,7 @@ func TestLLMService_NoChoices(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"choices": []}`))
+		_, _ = w.Write([]byte(`{"choices": []}`))
 	}))
 	defer server.Close()
 

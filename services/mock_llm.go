@@ -79,7 +79,7 @@ func MockHTTPServer(response string) *httptest.Server {
 			}]
 		}`, response)
 
-		w.Write([]byte(resp))
+		_, _ = w.Write([]byte(resp))
 	}))
 }
 
@@ -87,7 +87,7 @@ func MockHTTPServer(response string) *httptest.Server {
 func MockHTTPServerError(statusCode int) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)
-		w.Write([]byte("Error"))
+		_, _ = w.Write([]byte("Error"))
 	}))
 }
 
@@ -115,6 +115,6 @@ func MockHTTPServerWithJSON(model, jsonContent string) *httptest.Server {
 			}]
 		}`, jsonContent)
 
-		w.Write([]byte(resp))
+		_, _ = w.Write([]byte(resp))
 	}))
 }

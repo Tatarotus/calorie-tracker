@@ -71,7 +71,7 @@ func TestSQLite_GetStatsRange(t *testing.T) {
 	now := time.Now()
 
 	// Add food entries
-	db.AddFoodEntry(models.FoodEntry{
+	_ = db.AddFoodEntry(models.FoodEntry{
 		Timestamp: now,
 		Calories:  100,
 		Protein:   5,
@@ -79,7 +79,7 @@ func TestSQLite_GetStatsRange(t *testing.T) {
 		Fat:       2,
 	})
 
-	db.AddFoodEntry(models.FoodEntry{
+	_ = db.AddFoodEntry(models.FoodEntry{
 		Timestamp: now,
 		Calories:  200,
 		Protein:   10,
@@ -88,12 +88,12 @@ func TestSQLite_GetStatsRange(t *testing.T) {
 	})
 
 	// Add water entries
-	db.AddWaterEntry(models.WaterEntry{
+	_ = db.AddWaterEntry(models.WaterEntry{
 		Timestamp: now,
 		AmountML:  250,
 	})
 
-	db.AddWaterEntry(models.WaterEntry{
+	_ = db.AddWaterEntry(models.WaterEntry{
 		Timestamp: now,
 		AmountML:  500,
 	})
@@ -158,14 +158,14 @@ func TestSQLite_UpdateGoal(t *testing.T) {
 		Timestamp:   time.Now(),
 		Description: "Initial goal",
 	}
-	db.SetGoal(goal1)
+	_ = db.SetGoal(goal1)
 
 	// Update goal
 	goal2 := models.Goal{
 		Timestamp:   time.Now(),
 		Description: "Updated goal",
 	}
-	db.SetGoal(goal2)
+	_ = db.SetGoal(goal2)
 
 	retrieved, _ := db.GetLatestGoal()
 	if retrieved.Description != "Updated goal" {
@@ -196,12 +196,12 @@ func TestSQLite_RemoveLastEntry(t *testing.T) {
 
 	now := time.Now()
 	// Use different timestamps to ensure deterministic removal
-	db.AddFoodEntry(models.FoodEntry{
+	_ = db.AddFoodEntry(models.FoodEntry{
 		Timestamp:   now.Add(-2 * time.Second),
 		Description: "Entry 1",
 		Calories:    100,
 	})
-	db.AddFoodEntry(models.FoodEntry{
+	_ = db.AddFoodEntry(models.FoodEntry{
 		Timestamp:   now.Add(-1 * time.Second),
 		Description: "Entry 2",
 		Calories:    200,
@@ -239,7 +239,7 @@ func TestSQLite_GetWaterEntriesRange(t *testing.T) {
 
 	now := time.Now()
 	for i := 0; i < 3; i++ {
-		db.AddWaterEntry(models.WaterEntry{
+		_ = db.AddWaterEntry(models.WaterEntry{
 			Timestamp: now,
 			AmountML:  250 * float64(i+1),
 		})

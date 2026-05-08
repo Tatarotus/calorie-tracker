@@ -8,7 +8,7 @@ import (
 
 func TestNutritionEngine_FuzzyCacheLookup(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.CacheFood(models.ReferenceFood{
+	_ = mockDB.CacheFood(models.ReferenceFood{
 		Name:         "grilled chicken",
 		BaseQuantity: 100,
 		Unit:         "gram",
@@ -34,7 +34,7 @@ func TestNutritionEngine_FuzzyCacheLookup(t *testing.T) {
 
 func TestNutritionEngine_SynonymLookup(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.CacheFood(models.ReferenceFood{
+	_ = mockDB.CacheFood(models.ReferenceFood{
 		Name:         "arroz branco",
 		BaseQuantity: 100,
 		Unit:         "gram",

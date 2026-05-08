@@ -71,7 +71,7 @@ func TestTrackerService_GetGoal_NoGoal(t *testing.T) {
 
 func TestTrackerService_GetGoal_WithGoal(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.SetGoal(models.Goal{Description: "Gain muscle"})
+	_ = mockDB.SetGoal(models.Goal{Description: "Gain muscle"})
 	tracker := NewTrackerService(mockDB, nil)
 
 	goal, err := tracker.GetGoal()
@@ -85,7 +85,7 @@ func TestTrackerService_GetGoal_WithGoal(t *testing.T) {
 
 func TestTrackerService_RemoveLastEntry(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
+	_ = mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
 	tracker := NewTrackerService(mockDB, nil)
 
 	err := tracker.RemoveLastEntry()
@@ -101,7 +101,7 @@ func TestTrackerService_RemoveLastEntry(t *testing.T) {
 
 func TestTrackerService_GetTodayFoodEntries(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
+	_ = mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
 	tracker := NewTrackerService(mockDB, nil)
 
 	entries, err := tracker.GetTodayFoodEntries()
@@ -115,7 +115,7 @@ func TestTrackerService_GetTodayFoodEntries(t *testing.T) {
 
 func TestTrackerService_GetFoodEntriesRange(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
+	_ = mockDB.AddFoodEntry(models.FoodEntry{Description: "Apple", Timestamp: time.Now()})
 	tracker := NewTrackerService(mockDB, nil)
 
 	entries, err := tracker.GetFoodEntriesRange(7)
@@ -130,12 +130,12 @@ func TestTrackerService_GetFoodEntriesRange(t *testing.T) {
 func TestTrackerService_GetDailyStats(t *testing.T) {
 	mockDB := db.NewMockDB()
 	now := time.Now()
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Apple",
 		Timestamp:   now,
 		Calories:    95,
 	})
-	mockDB.AddWaterEntry(models.WaterEntry{
+	_ = mockDB.AddWaterEntry(models.WaterEntry{
 		Timestamp: now,
 		AmountML:  500,
 	})
@@ -186,7 +186,7 @@ func TestTrackerService_SaveFood(t *testing.T) {
 func TestTrackerService_ParseFood_CacheFirst(t *testing.T) {
 	mockDB := db.NewMockDB()
 	// Add to cache
-	mockDB.CacheFood(models.ReferenceFood{
+	_ = mockDB.CacheFood(models.ReferenceFood{
 		Name:         "apple",
 		BaseQuantity: 100,
 		Unit:         "gram",
@@ -247,23 +247,23 @@ func TestTrackerService_ParseFood_LLMFallback(t *testing.T) {
 
 func TestTrackerService_RunReview_Success(t *testing.T) {
 	mockDB := db.NewMockDB()
-	mockDB.SetGoal(models.Goal{Description: "Lose weight"})
+	_ = mockDB.SetGoal(models.Goal{Description: "Lose weight"})
 
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
 	yesterday := today.AddDate(0, 0, -1)
 
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Apple",
 		Timestamp:   today,
 		Calories:    95,
 	})
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Banana",
 		Timestamp:   yesterday,
 		Calories:    105,
 	})
-	mockDB.AddWaterEntry(models.WaterEntry{
+	_ = mockDB.AddWaterEntry(models.WaterEntry{
 		Timestamp: today,
 		AmountML:  500,
 	})
@@ -294,7 +294,7 @@ func TestTrackerService_RunReview_NoGoal(t *testing.T) {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
 
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Apple",
 		Timestamp:   today,
 		Calories:    95,
@@ -327,12 +327,12 @@ func TestTrackerService_DailyStatsDateFormatting(t *testing.T) {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
 	yesterday := today.AddDate(0, 0, -1)
 
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Apple",
 		Timestamp:   today,
 		Calories:    95,
 	})
-	mockDB.AddFoodEntry(models.FoodEntry{
+	_ = mockDB.AddFoodEntry(models.FoodEntry{
 		Description: "Banana",
 		Timestamp:   yesterday,
 		Calories:    105,

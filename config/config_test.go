@@ -35,16 +35,16 @@ func TestLoad(t *testing.T) {
 	}()
 
 	// Clear env vars to test defaults
-	os.Unsetenv("NVIDIA_API_KEY")
-	os.Unsetenv("OPENAI_BASE_URL")
-	os.Unsetenv("OPENAI_MODEL")
-	os.Unsetenv("OPENAI_MODEL2")
-	os.Unsetenv("FATSECRET_CLIENT_ID")
-	os.Unsetenv("FATSECRET_CLIENT_SECRET")
-	os.Unsetenv("FATSECRET_SCOPE")
-	os.Unsetenv("FATSECRET_REGION")
-	os.Unsetenv("FATSECRET_LANGUAGE")
-	os.Unsetenv("FATSECRET_USE_LOCALIZATION")
+	_ = os.Unsetenv("NVIDIA_API_KEY")
+	_ = os.Unsetenv("OPENAI_BASE_URL")
+	_ = os.Unsetenv("OPENAI_MODEL")
+	_ = os.Unsetenv("OPENAI_MODEL2")
+	_ = os.Unsetenv("FATSECRET_CLIENT_ID")
+	_ = os.Unsetenv("FATSECRET_CLIENT_SECRET")
+	_ = os.Unsetenv("FATSECRET_SCOPE")
+	_ = os.Unsetenv("FATSECRET_REGION")
+	_ = os.Unsetenv("FATSECRET_LANGUAGE")
+	_ = os.Unsetenv("FATSECRET_USE_LOCALIZATION")
 
 	cfg := Load()
 
@@ -86,29 +86,36 @@ func TestLoadWithEnvVars(t *testing.T) {
 	origFatSecretLanguage := os.Getenv("FATSECRET_LANGUAGE")
 	origFatSecretUseLocalization := os.Getenv("FATSECRET_USE_LOCALIZATION")
 	defer func() {
-		os.Setenv("NVIDIA_API_KEY", origNVIDIA)
-		os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
-		os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
-		os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
-		os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
-		os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
-		os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
-		os.Setenv("FATSECRET_REGION", origFatSecretRegion)
-		os.Setenv("FATSECRET_LANGUAGE", origFatSecretLanguage)
-		os.Setenv("FATSECRET_USE_LOCALIZATION", origFatSecretUseLocalization)
+		_ = os.Setenv("NVIDIA_API_KEY", origNVIDIA)
+		_ = os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
+		_ = os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
+		_ = os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
+		_ = os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
+		_ = os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
+		_ = os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
+		_ = os.Setenv("FATSECRET_REGION", origFatSecretRegion)
+		_ = os.Setenv("FATSECRET_LANGUAGE", origFatSecretLanguage)
+		_ = os.Setenv("FATSECRET_USE_LOCALIZATION", origFatSecretUseLocalization)
 	}()
 
-	// Set custom env vars
-	os.Setenv("NVIDIA_API_KEY", "test-key-123")
-	os.Setenv("OPENAI_BASE_URL", "https://custom.url/v1")
-	os.Setenv("OPENAI_MODEL", "custom-model")
-	os.Setenv("OPENAI_MODEL2", "custom-model-2")
-	os.Setenv("FATSECRET_CLIENT_ID", "fat-id")
-	os.Setenv("FATSECRET_CLIENT_SECRET", "fat-secret")
-	os.Setenv("FATSECRET_SCOPE", "basic localization")
-	os.Setenv("FATSECRET_REGION", "BR")
-	os.Setenv("FATSECRET_LANGUAGE", "pt")
-	os.Setenv("FATSECRET_USE_LOCALIZATION", "true")
+	// Clear env vars to test defaults
+	_ = os.Unsetenv("NVIDIA_API_KEY")
+	_ = os.Unsetenv("OPENAI_BASE_URL")
+	_ = os.Unsetenv("OPENAI_MODEL")
+	_ = os.Unsetenv("OPENAI_MODEL2")
+	_ = os.Unsetenv("FATSECRET_CLIENT_ID")
+	_ = os.Unsetenv("FATSECRET_CLIENT_SECRET")
+	_ = os.Unsetenv("FATSECRET_SCOPE")
+	_ = os.Setenv("NVIDIA_API_KEY", "test-key-123")
+	_ = os.Setenv("OPENAI_BASE_URL", "https://custom.url/v1")
+	_ = os.Setenv("OPENAI_MODEL", "custom-model")
+	_ = os.Setenv("OPENAI_MODEL2", "custom-model-2")
+	_ = os.Setenv("FATSECRET_CLIENT_ID", "fat-id")
+	_ = os.Setenv("FATSECRET_CLIENT_SECRET", "fat-secret")
+	_ = os.Setenv("FATSECRET_SCOPE", "basic localization")
+	_ = os.Setenv("FATSECRET_REGION", "BR")
+	_ = os.Setenv("FATSECRET_LANGUAGE", "pt")
+	_ = os.Setenv("FATSECRET_USE_LOCALIZATION", "true")
 
 	cfg := Load()
 
@@ -143,21 +150,21 @@ func TestGetEnv(t *testing.T) {
 	orig := os.Getenv("TEST_GET_ENV_VAR")
 	defer func() {
 		if orig == "" {
-			os.Unsetenv("TEST_GET_ENV_VAR")
+			_ = os.Unsetenv("TEST_GET_ENV_VAR")
 		} else {
-			os.Setenv("TEST_GET_ENV_VAR", orig)
+			_ = os.Setenv("TEST_GET_ENV_VAR", orig)
 		}
 	}()
 
 	// Test with existing env var
-	os.Setenv("TEST_GET_ENV_VAR", "test-value")
+	_ = os.Setenv("TEST_GET_ENV_VAR", "test-value")
 	result := getEnv("TEST_GET_ENV_VAR", "fallback")
 	if result != "test-value" {
 		t.Errorf("Expected test-value, got %s", result)
 	}
 
 	// Test with non-existing env var (should use fallback)
-	os.Unsetenv("TEST_GET_ENV_VAR")
+	_ = os.Unsetenv("TEST_GET_ENV_VAR")
 	result = getEnv("TEST_GET_ENV_VAR", "fallback-value")
 	if result != "fallback-value" {
 		t.Errorf("Expected fallback-value, got %s", result)
@@ -185,7 +192,7 @@ FATSECRET_SCOPE=basic
 		"FATSECRET_SCOPE",
 	}
 	for _, key := range keys {
-		os.Unsetenv(key)
+		_ = os.Unsetenv(key)
 	}
 
 	loadDotEnv(envPath)

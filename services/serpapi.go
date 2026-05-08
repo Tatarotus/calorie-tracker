@@ -71,7 +71,7 @@ func (p *SerpAPIProvider) resolveWithEngine(item ParsedFood, engine, query strin
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, nil
@@ -152,7 +152,9 @@ func (p *SerpAPIProvider) parseTextBlocks(blocks []struct {
 	return bestRef
 }
 
-func (p *SerpAPIProvider) extractMacrosFromList(list []struct{ Snippet string `json:"snippet"` }) (models.Macros, int) {
+func (p *SerpAPIProvider) extractMacrosFromList(list []struct {
+	Snippet string `json:"snippet"`
+}) (models.Macros, int) {
 	macros := models.Macros{}
 	foundCount := 0
 	for _, item := range list {

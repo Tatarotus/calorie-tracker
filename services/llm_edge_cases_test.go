@@ -14,7 +14,7 @@ func TestLLMService_CallLLM_EmptyChoices(t *testing.T) {
 	// Mock server that returns 0 choices
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"choices": []}`))
+		_, _ = w.Write([]byte(`{"choices": []}`))
 	}))
 	defer server.Close()
 
@@ -37,7 +37,7 @@ func TestLLMService_CallLLM_NonOKStatus(t *testing.T) {
 	// Mock server that returns 401 Unauthorized
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error": "Unauthorized"}`))
+		_, _ = w.Write([]byte(`{"error": "Unauthorized"}`))
 	}))
 	defer server.Close()
 
@@ -73,10 +73,10 @@ func TestLLMService_ParseFood_RetrySuccess(t *testing.T) {
 			}{
 				{Message: struct {
 					Content string `json:"content"`
-				}{Content: `{"name": "test", "base_quantity": 100, "unit": "g", "macros": {"calories": 100, "protein": 1, "carbs": 25, "fat": 0}}`}},
+				}{Content: "{\"name\":\"apple\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":100,\"protein\":0.3,\"carbs\":14,\"fat\":0.2}}"}},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -119,7 +119,7 @@ func TestLLMService_AnalyzeReview_RetrySuccess(t *testing.T) {
 				}{Content: `{"summary": "Good", "score": 80}`}},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -249,7 +249,7 @@ with a newline",
 		w.WriteHeader(http.StatusOK)
 		escapedContent, _ := json.Marshal(malformedResponse)
 		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
 
@@ -298,7 +298,7 @@ with newline",
 		w.WriteHeader(http.StatusOK)
 		escapedContent, _ := json.Marshal(malformedResponse)
 		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
 

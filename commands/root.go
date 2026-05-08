@@ -43,7 +43,7 @@ func runTUI() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	llm := services.NewLLMService(cfg)
 	tracker := services.NewTrackerService(database, llm)
@@ -67,7 +67,7 @@ func initDBAndTracker() (*db.DB, *services.TrackerService) {
 	if cfg.SambaAPIKey != "" {
 		llm = services.NewLLMService(cfg)
 	}
-	
+
 	tracker := services.NewTrackerService(database, llm)
 	return database, tracker
 }

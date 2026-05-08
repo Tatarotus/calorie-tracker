@@ -16,8 +16,8 @@ import (
 // TestFullFoodTrackingFlow tests the end-to-end flow of tracking food
 func TestFullFoodTrackingFlow(t *testing.T) {
 	// Temporarily clear API keys to avoid real network calls
-	os.Setenv("SERPAPI_KEY", "")
-	os.Setenv("FATSECRET_CLIENT_ID", "")
+	_ = os.Setenv("SERPAPI_KEY", "")
+	_ = os.Setenv("FATSECRET_CLIENT_ID", "")
 	defer func() {
 		// No need to restore since tests run in isolation, but good practice
 	}()
@@ -27,7 +27,7 @@ func TestFullFoodTrackingFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	cfg := &config.Config{
 		SambaAPIKey:   "test-key",
@@ -39,7 +39,7 @@ func TestFullFoodTrackingFlow(t *testing.T) {
 	// We need a mock server that returns a ReferenceFood
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"apple\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":350,\"protein\":1,\"carbs\":25,\"fat\":0}}"}}]}`)
+		_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"apple\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":350,\"protein\":1,\"carbs\":25,\"fat\":0}}"}}]}`)
 	}))
 	defer server.Close()
 
@@ -101,7 +101,7 @@ func TestWaterTrackingFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	cfg := &config.Config{
 		SambaAPIKey:   "test-key",
@@ -132,7 +132,7 @@ func TestGoalSettingFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	tracker := services.NewTrackerService(testDB, nil)
 
@@ -158,23 +158,23 @@ func TestDailyStatsAggregationFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	tracker := services.NewTrackerService(testDB, nil)
 	now := time.Now()
 
 	// Add entries directly to DB for simplicity
-	testDB.AddFoodEntry(models.FoodEntry{
+	_ = testDB.AddFoodEntry(models.FoodEntry{
 		Timestamp: now,
 		Calories:  300,
 		Protein:   20,
 	})
-	testDB.AddFoodEntry(models.FoodEntry{
+	_ = testDB.AddFoodEntry(models.FoodEntry{
 		Timestamp: now,
 		Calories:  500,
 		Protein:   30,
 	})
-	testDB.AddWaterEntry(models.WaterEntry{
+	_ = testDB.AddWaterEntry(models.WaterEntry{
 		Timestamp: now,
 		AmountML:  250,
 	})
@@ -201,13 +201,13 @@ func TestUndoLastEntryFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	tracker := services.NewTrackerService(testDB, nil)
 
 	// Add two entries
-	testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 1", Timestamp: time.Now().Add(-1 * time.Minute)})
-	testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 2", Timestamp: time.Now()})
+	_ = testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 1", Timestamp: time.Now().Add(-1 * time.Minute)})
+	_ = testDB.AddFoodEntry(models.FoodEntry{Description: "Entry 2", Timestamp: time.Now()})
 
 	// Undo
 	err = tracker.RemoveLastEntry()
@@ -231,15 +231,15 @@ func TestMultipleDaysStatsFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer testDB.Close()
+	defer func() { _ = testDB.Close() }()
 
 	tracker := services.NewTrackerService(testDB, nil)
 	now := time.Now()
 
 	// Today
-	testDB.AddFoodEntry(models.FoodEntry{Timestamp: now, Calories: 2000})
+	_ = testDB.AddFoodEntry(models.FoodEntry{Timestamp: now, Calories: 2000})
 	// Yesterday
-	testDB.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -1), Calories: 1800})
+	_ = testDB.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -1), Calories: 1800})
 
 	// Check today's stats
 	statsToday, _ := tracker.GetDailyStats(now)

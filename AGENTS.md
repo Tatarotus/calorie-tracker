@@ -167,6 +167,13 @@ GitHub Actions workflow (`.github/workflows/ci.yml`):
 - **mutation**: Run mutation testing (≥ 60%)
 - **build**: Build binary, verify architecture
 
+# Agent Instructions
+
+- If the repository has a pre-commit hook, never bypass it (`--no-verify`, disabling hooks, etc.).
+- Run the hook normally and carefully read the errors.
+- Fix the underlying issues instead of skipping validation.
+- Keep iterating until the pre-commit checks pass successfully.
+
 ## Environment Variables
 
 | Variable | Default | Description |

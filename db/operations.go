@@ -33,7 +33,7 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.FoodEntry
 	for rows.Next() {
@@ -60,7 +60,7 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.FoodEntry
 	for rows.Next() {
@@ -107,7 +107,7 @@ func (db *DB) GetAllCacheEntries() ([]models.ReferenceFood, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.ReferenceFood
 	for rows.Next() {
@@ -174,7 +174,7 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.WaterEntry
 	for rows.Next() {
@@ -201,7 +201,7 @@ func (db *DB) GetWaterEntriesRange(days int) ([]models.WaterEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.WaterEntry
 	for rows.Next() {
@@ -253,7 +253,7 @@ func (db *DB) GetStatsRange(days int) ([]models.DailyStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	statsMap := make(map[string]*models.DailyStats)
 	for rows.Next() {

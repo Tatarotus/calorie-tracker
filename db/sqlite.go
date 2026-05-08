@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"calorie-tracker/models"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -175,7 +176,7 @@ func (db *DB) tableNeedsMigration(tableName string, requiredColumns []string) (b
 	if err != nil {
 		return false, nil
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	columns := make(map[string]bool)
 	for rows.Next() {

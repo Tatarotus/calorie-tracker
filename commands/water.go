@@ -20,7 +20,7 @@ var waterCmd = &cobra.Command{
 		}
 
 		database, tracker := initDBAndTracker()
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		err = tracker.AddWater(amount)
 		if err != nil {

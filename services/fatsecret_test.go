@@ -220,7 +220,7 @@ func TestNewFatSecretProviderFromConfig(t *testing.T) {
 	}
 	p = NewFatSecretProviderFromConfig(cfg)
 	if p == nil {
-		t.Error("expected non-nil provider for valid config")
+		t.Fatalf("expected non-nil provider for valid config")
 	}
 	if p.clientID != "test-id" {
 		t.Errorf("expected clientID 'test-id', got %s", p.clientID)

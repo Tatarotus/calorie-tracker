@@ -1,30 +1,32 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocyclo
+    - errcheck
+
 linters-settings:
   gocyclo:
     min-complexity: 20
   govet:
     enable-all: true
-  staticcheck:
-    checks: ["all"]
-linters:
-  disable-all: true
+
+formatters:
   enable:
-  - govet
-  - staticcheck
-  - unused
-  - ineffassign
-  - gocyclo
-  - gosimple
-  - errcheck
-  - goimports
+    - goimports
+
 issues:
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
   exclude-dirs:
-  - vendor
+    - vendor
   exclude-rules:
-  - path: "chacha20poly1305"
-    text: "file requires newer Go version"
-  - path: "config/config_test.go"
-    linters:
-    - errcheck
+    - path: "config/config_test.go"
+      linters:
+        - errcheck

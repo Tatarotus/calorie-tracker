@@ -9,7 +9,7 @@ import (
 
 func TestSerpAPIProvider_ParseTextBlocks(t *testing.T) {
 	p := &SerpAPIProvider{}
-	
+
 	blocks := []struct {
 		Type string `json:"type"`
 		List []struct {
@@ -18,7 +18,7 @@ func TestSerpAPIProvider_ParseTextBlocks(t *testing.T) {
 		Snippet string `json:"snippet"`
 	}{
 		{
-			Type: "heading",
+			Type:    "heading",
 			Snippet: "Moranga Crua",
 		},
 		{
@@ -33,7 +33,7 @@ func TestSerpAPIProvider_ParseTextBlocks(t *testing.T) {
 			},
 		},
 		{
-			Type: "heading",
+			Type:    "heading",
 			Snippet: "Moranga Refogada/Cozida",
 		},
 		{
@@ -87,7 +87,7 @@ func TestSerpAPIProvider_ResolveFood_GoogleAI(t *testing.T) {
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(mockResponse)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer ts.Close()
 

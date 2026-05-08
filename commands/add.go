@@ -14,9 +14,9 @@ var addCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		description := strings.Join(args, " ")
-		
+
 		database, tracker := initDBAndTracker()
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		fmt.Printf("Analyzing: %s...\n", description)
 		preview, err := tracker.ParseFood(description)
@@ -30,7 +30,7 @@ var addCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Successfully added: %s\n", preview.Description)
-		fmt.Printf("Calories: %.0f kcal | Protein: %.1fg | Carbs: %.1fg | Fat: %.1fg\n", 
+		fmt.Printf("Calories: %.0f kcal | Protein: %.1fg | Carbs: %.1fg | Fat: %.1fg\n",
 			preview.Calories, preview.Protein, preview.Carbs, preview.Fat)
 	},
 }

@@ -24,7 +24,7 @@ func TestDB_NewTestDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if db.conn == nil {
 		t.Error("Expected non-nil connection")
@@ -36,7 +36,7 @@ func TestDB_GetConn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	conn := db.GetConn()
 	if conn == nil {
@@ -50,7 +50,7 @@ func TestDB_MigrateExistingTables_NoMigrationNeeded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Calling migrate again should not fail
 	err = db.migrateExistingTables()
@@ -64,7 +64,7 @@ func TestDB_TableNeedsMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Table exists with all columns
 	needsMigration, err := db.tableNeedsMigration("food_entries", []string{"id", "timestamp"})
@@ -99,7 +99,7 @@ func TestDB_SeedReferenceFoods(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Seed should have been called during migration
 	// Verify some foods exist

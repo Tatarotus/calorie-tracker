@@ -12,7 +12,7 @@ func TestDB_AddFoodEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	entry := models.FoodEntry{
 		Timestamp:   time.Now(),
@@ -42,7 +42,7 @@ func TestDB_AddWaterEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	entry := models.WaterEntry{
 		Timestamp: time.Now(),
@@ -68,12 +68,12 @@ func TestDB_GetFoodEntriesRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now()
-	db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "today", Calories: 100})
-	db.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -1), Description: "yesterday", Calories: 200})
-	db.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -8), Description: "last week", Calories: 300})
+	_ = db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "today", Calories: 100})
+	_ = db.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -1), Description: "yesterday", Calories: 200})
+	_ = db.AddFoodEntry(models.FoodEntry{Timestamp: now.AddDate(0, 0, -8), Description: "last week", Calories: 300})
 
 	entries, err := db.GetFoodEntriesRange(7)
 	if err != nil {
@@ -89,12 +89,12 @@ func TestDB_GetWaterEntriesRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now()
-	db.AddWaterEntry(models.WaterEntry{Timestamp: now, AmountML: 500})
-	db.AddWaterEntry(models.WaterEntry{Timestamp: now.AddDate(0, 0, -1), AmountML: 300})
-	db.AddWaterEntry(models.WaterEntry{Timestamp: now.AddDate(0, 0, -8), AmountML: 200})
+	_ = db.AddWaterEntry(models.WaterEntry{Timestamp: now, AmountML: 500})
+	_ = db.AddWaterEntry(models.WaterEntry{Timestamp: now.AddDate(0, 0, -1), AmountML: 300})
+	_ = db.AddWaterEntry(models.WaterEntry{Timestamp: now.AddDate(0, 0, -8), AmountML: 200})
 
 	entries, err := db.GetWaterEntriesRange(7)
 	if err != nil {
@@ -110,11 +110,11 @@ func TestDB_GetStatsRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now()
-	db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "today", Calories: 100, Protein: 10, Carbs: 20, Fat: 5})
-	db.AddWaterEntry(models.WaterEntry{Timestamp: now, AmountML: 500})
+	_ = db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "today", Calories: 100, Protein: 10, Carbs: 20, Fat: 5})
+	_ = db.AddWaterEntry(models.WaterEntry{Timestamp: now, AmountML: 500})
 
 	stats, err := db.GetStatsRange(7)
 	if err != nil {
@@ -136,7 +136,7 @@ func TestDB_CacheFood(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	food := models.ReferenceFood{
 		Name:         "apple",
@@ -167,10 +167,10 @@ func TestDB_GetAllCacheEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
-	db.CacheFood(models.ReferenceFood{Name: "apple", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 52}})
-	db.CacheFood(models.ReferenceFood{Name: "banana", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 89}})
+	_ = db.CacheFood(models.ReferenceFood{Name: "apple", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 52}})
+	_ = db.CacheFood(models.ReferenceFood{Name: "banana", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 89}})
 
 	entries, err := db.GetAllCacheEntries()
 	if err != nil {
@@ -186,7 +186,7 @@ func TestDB_GetReferenceFood(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Reference foods are seeded on DB creation
 	ref, err := db.GetReferenceFood("arroz branco")
@@ -206,7 +206,7 @@ func TestDB_SetGoal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	goal := models.Goal{
 		Timestamp:   time.Now(),
@@ -235,10 +235,10 @@ func TestDB_RemoveLastEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	now := time.Now()
-	db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "apple", Calories: 95})
+	_ = db.AddFoodEntry(models.FoodEntry{Timestamp: now, Description: "apple", Calories: 95})
 
 	err = db.RemoveLastEntry()
 	if err != nil {
@@ -256,7 +256,7 @@ func TestDB_GetCachedFood_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	cached, err := db.GetCachedFood("nonexistent")
 	if err != nil {
@@ -272,7 +272,7 @@ func TestDB_GetLatestGoal_NoGoal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test DB: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	goal, err := db.GetLatestGoal()
 	if err != nil {

@@ -30,7 +30,7 @@ func TestLLMService_ParseFood_Retry(t *testing.T) {
 		jsonResp := MockFoodPreviewResponse("Orange", 62, 1.2, 15, 0.2)
 		escapedContent, _ := json.Marshal(jsonResp)
 		response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 	defer server.Close()
 
@@ -132,7 +132,7 @@ func TestLLMService_ParseFood_TableDriven(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				escapedContent, _ := json.Marshal(tt.response)
 				response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-				w.Write([]byte(response))
+				_, _ = w.Write([]byte(response))
 			}))
 			defer server.Close()
 
@@ -210,7 +210,7 @@ func TestLLMService_AnalyzeReview_TableDriven(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				escapedContent, _ := json.Marshal(tt.response)
 				response := `{"choices": [{"message": {"content": ` + string(escapedContent) + `}}]}`
-				w.Write([]byte(response))
+				_, _ = w.Write([]byte(response))
 			}))
 			defer server.Close()
 

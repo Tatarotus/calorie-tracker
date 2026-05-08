@@ -231,7 +231,7 @@ func (s *LLMService) callLLM(model, prompt string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 
@@ -319,7 +319,7 @@ func (s *LLMService) sanitizeJSON(jsonStr string) string {
 			default:
 				// Also escape any other control characters (0x00-0x1F except those handled above)
 				if r >= 0x00 && r <= 0x1F {
-					sb.WriteString(fmt.Sprintf("\\u%04x", r))
+					fmt.Fprintf(&sb, "\\u%04x", r)
 				} else {
 					sb.WriteRune(r)
 				}

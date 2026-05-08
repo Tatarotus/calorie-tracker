@@ -94,7 +94,7 @@ func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 				Fat:      preview.Fat * factor,
 			},
 		}
-		s.db.CacheFood(cacheEntry)
+		_ = s.db.CacheFood(cacheEntry)
 	}
 
 	return nil

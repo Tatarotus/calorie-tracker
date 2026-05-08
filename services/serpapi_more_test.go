@@ -106,7 +106,7 @@ func TestSerpAPIProvider_NewSerpAPIProvider(t *testing.T) {
 	// Valid API key should return provider
 	p = NewSerpAPIProvider("test-key")
 	if p == nil {
-		t.Error("expected non-nil provider for valid API key")
+		t.Fatalf("expected non-nil provider for valid API key")
 	}
 	if p.apiKey != "test-key" {
 		t.Errorf("expected apiKey 'test-key', got %s", p.apiKey)

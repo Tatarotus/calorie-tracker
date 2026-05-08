@@ -107,7 +107,7 @@ func TestSQLite_FoodEntriesDifferentDates(t *testing.T) {
 		Description: "Today's Food",
 		Calories:    200,
 	}
-	db.AddFoodEntry(todayEntry)
+	_ = db.AddFoodEntry(todayEntry)
 
 	// Add entries for yesterday
 	yesterdayEntry := models.FoodEntry{
@@ -115,7 +115,7 @@ func TestSQLite_FoodEntriesDifferentDates(t *testing.T) {
 		Description: "Yesterday's Food",
 		Calories:    300,
 	}
-	db.AddFoodEntry(yesterdayEntry)
+	_ = db.AddFoodEntry(yesterdayEntry)
 
 	// Get today's entries
 	todayEntries, err := db.GetDailyFoodEntries(today)
@@ -208,7 +208,7 @@ func TestSQLite_GetFoodEntriesRange(t *testing.T) {
 	now := time.Now()
 	for i := 0; i < 5; i++ {
 		date := now.AddDate(0, 0, -i)
-		db.AddFoodEntry(models.FoodEntry{
+		_ = db.AddFoodEntry(models.FoodEntry{
 			Timestamp:   date,
 			Description: "Day " + string(rune('0'+i)),
 			Calories:    100 * float64(i+1),
@@ -237,7 +237,7 @@ func TestSQLite_CacheFood_Duplicate(t *testing.T) {
 			Calories: 100,
 		},
 	}
-	db.CacheFood(ref1)
+	_ = db.CacheFood(ref1)
 
 	ref2 := models.ReferenceFood{
 		Name:         "Apple",
