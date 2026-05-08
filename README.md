@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Tatarotus/calorie-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Tatarotus/calorie-tracker/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/Tatarotus/calorie-tracker/branch/main/graph/badge.svg)](https://codecov.io/gh/Tatarotus/calorie-tracker)
-[![Go Version](https://img.shields.io/badge/go-1.23-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/go-1.26-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A smart, interactive CLI tool to track your daily nutrition and water intake using AI-powered natural language processing and a persistent local database.
@@ -29,9 +29,17 @@ A smart, interactive CLI tool to track your daily nutrition and water intake usi
    go mod tidy
    ```
 
-3. Set your NVIDIA API Key:
+3. Set your Configuration (via Environment Variables or `.env` file):
+   Create a `.env` file in the root directory (you can copy `.env.example` if available):
+   ```env
+   NVIDIA_API_KEY="your-nvidia-nim-api-key"
+   SERPAPI_KEY="your-serpapi-key-optional"
+   FATSECRET_CLIENT_ID="your-fatsecret-client-id-optional"
+   FATSECRET_CLIENT_SECRET="your-fatsecret-client-secret-optional"
+   ```
+   Or export them directly:
    ```bash
-   export NVIDIA_API_KEY="your-api-key-here"
+   export NVIDIA_API_KEY="your-nvidia-nim-api-key"
    ```
 
 4. Run the application:
@@ -50,7 +58,7 @@ A smart, interactive CLI tool to track your daily nutrition and water intake usi
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.26+
 - `gocyclo` for cyclomatic complexity checks
 - `golangci-lint` for linting
 - `go-mutesting` for mutation testing (CI only)
