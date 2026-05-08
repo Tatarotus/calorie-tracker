@@ -40,7 +40,9 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var entries []models.FoodEntry
 	for rows.Next() {
@@ -69,7 +71,9 @@ func (db *DB) GetDailyWaterEntries(t time.Time) ([]models.WaterEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	var entries []models.WaterEntry
 	for rows.Next() {

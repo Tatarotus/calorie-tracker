@@ -302,10 +302,16 @@ func TestMockDB_GetLatestGoal_NoGoal(t *testing.T) {
 
 func TestMockDB_RemoveLastEntry(t *testing.T) {
 	db := NewMockDB()
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	err := db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
-	err := db.RemoveLastEntry()
+	err = db.RemoveLastEntry()
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -339,8 +345,14 @@ func TestMockDB_Close(t *testing.T) {
 
 func TestMockDB_GetFoodEntries(t *testing.T) {
 	db := NewMockDB()
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	err := db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddFoodEntry(models.FoodEntry{Description: "Entry 2"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries := db.GetFoodEntries()
 	if len(entries) != 2 {
@@ -350,8 +362,14 @@ func TestMockDB_GetFoodEntries(t *testing.T) {
 
 func TestMockDB_GetWaterEntries(t *testing.T) {
 	db := NewMockDB()
-	db.AddWaterEntry(models.WaterEntry{AmountML: 250})
-	db.AddWaterEntry(models.WaterEntry{AmountML: 500})
+	err := db.AddWaterEntry(models.WaterEntry{AmountML: 250})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddWaterEntry(models.WaterEntry{AmountML: 500})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	entries := db.GetWaterEntries()
 	if len(entries) != 2 {
@@ -361,9 +379,18 @@ func TestMockDB_GetWaterEntries(t *testing.T) {
 
 func TestMockDB_Clear(t *testing.T) {
 	db := NewMockDB()
-	db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
-	db.AddWaterEntry(models.WaterEntry{AmountML: 250})
-	db.SetGoal(models.Goal{Description: "Test"})
+	err := db.AddFoodEntry(models.FoodEntry{Description: "Entry 1"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.AddWaterEntry(models.WaterEntry{AmountML: 250})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	err = db.SetGoal(models.Goal{Description: "Test"})
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	db.Clear()
 
