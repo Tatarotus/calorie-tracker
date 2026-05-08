@@ -1,3 +1,17 @@
 .env
 calorie-tracker
 calorie-tracker1
+*.out
+*.html
+*.bak
+*.log
+lint_results.txt
+session-*.md
+.golangci-v2.yml
+.golangci.bck.yml
+check_runs.json
+check_runs_latest.json
+lint_annotations.json
+test_annotations.json
+gh_log.txt
+job_log.txt
