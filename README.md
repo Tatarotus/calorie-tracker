@@ -42,10 +42,25 @@ A smart, interactive CLI tool to track your daily nutrition and water intake usi
    export NVIDIA_API_KEY="your-nvidia-nim-api-key"
    ```
 
-4. Run the application:
+4. Build the binary (optional but recommended):
    ```bash
-   go run main.go
+   go build -o calorie-tracker main.go
    ```
+   This generates a `calorie-tracker` executable in your current directory.
+
+5. Run the application:
+   - To launch in **Interactive TUI mode**:
+     ```bash
+     ./calorie-tracker
+     ```
+   - To run a **direct command**:
+     ```bash
+     ./calorie-tracker add "2 eggs"
+     ```
+   - Or run directly using Go:
+     ```bash
+     go run main.go
+     ```
 
 ## Tech Stack
 
