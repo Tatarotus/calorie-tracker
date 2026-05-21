@@ -56,7 +56,11 @@ func (db *DB) migrate() error {
 			calories REAL,
 			protein REAL,
 			carbs REAL,
-			fat REAL
+			fat REAL,
+			original_query TEXT,
+			normalized_query TEXT,
+			canonical_key TEXT,
+			resolution_trace TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS water_entries (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,6 +90,60 @@ func (db *DB) migrate() error {
 			carbs REAL,
 			fat REAL
 		)`,
+		`CREATE TABLE IF NOT EXISTS canonical_foods (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			canonical_name TEXT UNIQUE,
+			normalized_name TEXT,
+			aliases_json TEXT,
+			language TEXT,
+			category TEXT,
+			food_type TEXT,
+			composition_hints TEXT,
+			default_serving_amount REAL,
+			default_serving_unit TEXT,
+			density_multiplier REAL,
+			grams_per_ml REAL,
+			created_at DATETIME,
+			updated_at DATETIME
+		)`,
+		`CREATE TABLE IF NOT EXISTS nutrition_cache (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			canonical_food_id INTEGER,
+			serving_amount REAL,
+			serving_unit TEXT,
+			calories REAL,
+			protein REAL,
+			carbs REAL,
+			fat REAL,
+			fiber REAL,
+			source_type TEXT,
+			source_confidence REAL,
+			source_reference TEXT,
+			resolution_method TEXT,
+			created_at DATETIME,
+			updated_at DATETIME,
+			FOREIGN KEY(canonical_food_id) REFERENCES canonical_foods(id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS user_overrides (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			canonical_food_id INTEGER,
+			serving_amount REAL,
+			serving_unit TEXT,
+			calories REAL,
+			protein REAL,
+			carbs REAL,
+			fat REAL,
+			fiber REAL,
+			override_reason TEXT,
+			created_at DATETIME,
+			updated_at DATETIME,
+			FOREIGN KEY(canonical_food_id) REFERENCES canonical_foods(id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_canonical_foods_normalized_name ON canonical_foods(normalized_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_nutrition_cache_canonical_food_id ON nutrition_cache(canonical_food_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_nutrition_cache_source_type ON nutrition_cache(source_type)`,
+		`CREATE INDEX IF NOT EXISTS idx_nutrition_cache_updated_at ON nutrition_cache(updated_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_overrides_canonical_food_id ON user_overrides(canonical_food_id)`,
 	}
 
 	for _, q := range queries {
@@ -98,10 +156,25 @@ func (db *DB) migrate() error {
 		return err
 	}
 
-	return db.seedReferenceFoods()
+	if err := db.seedReferenceFoods(); err != nil {
+		return err
+	}
+
+	return db.seedCanonicalFoods()
 }
 
 func (db *DB) migrateExistingTables() error {
+	needsFoodEntriesMigration, err := db.tableNeedsMigration("food_entries", []string{"original_query", "normalized_query", "canonical_key", "resolution_trace"})
+	if err != nil {
+		return fmt.Errorf("checking food_entries migration: %w", err)
+	}
+	if needsFoodEntriesMigration {
+		_, _ = db.conn.Exec(`ALTER TABLE food_entries ADD COLUMN original_query TEXT`)
+		_, _ = db.conn.Exec(`ALTER TABLE food_entries ADD COLUMN normalized_query TEXT`)
+		_, _ = db.conn.Exec(`ALTER TABLE food_entries ADD COLUMN canonical_key TEXT`)
+		_, _ = db.conn.Exec(`ALTER TABLE food_entries ADD COLUMN resolution_trace TEXT`)
+	}
+
 	needsFoodCacheMigration, err := db.tableNeedsMigration("food_cache", []string{"base_quantity", "unit"})
 	if err != nil {
 		return fmt.Errorf("checking food_cache migration: %w", err)
@@ -141,7 +214,7 @@ func (db *DB) migrateExistingTables() error {
 	}
 
 	if needsRefFoodsMigration {
-		if _, err := db.conn.Exec(`
+		if _, err = db.conn.Exec(`
 			CREATE TABLE IF NOT EXISTS reference_foods_new (
 				name TEXT PRIMARY KEY,
 				base_quantity REAL,
@@ -160,12 +233,26 @@ func (db *DB) migrateExistingTables() error {
 			SELECT name, calories, protein, carbs, fat FROM reference_foods
 		`)
 
-		if _, err := db.conn.Exec(`DROP TABLE IF EXISTS reference_foods`); err != nil {
+		if _, err = db.conn.Exec(`DROP TABLE IF EXISTS reference_foods`); err != nil {
 			return fmt.Errorf("dropping old reference_foods: %w", err)
 		}
-		if _, err := db.conn.Exec(`ALTER TABLE reference_foods_new RENAME TO reference_foods`); err != nil {
+		if _, err = db.conn.Exec(`ALTER TABLE reference_foods_new RENAME TO reference_foods`); err != nil {
 			return fmt.Errorf("renaming reference_foods_new: %w", err)
 		}
+	}
+
+	needsCanonicalMigration, err := db.tableNeedsMigration("canonical_foods", []string{"food_type", "composition_hints"})
+	if err != nil {
+		return fmt.Errorf("checking canonical_foods migration: %w", err)
+	}
+	if needsCanonicalMigration {
+		_, _ = db.conn.Exec(`ALTER TABLE canonical_foods ADD COLUMN food_type TEXT`)
+		_, _ = db.conn.Exec(`ALTER TABLE canonical_foods ADD COLUMN composition_hints TEXT`)
+	}
+
+	// Trigger the custom migration of legacy food_cache entries to canonical_foods & nutrition_cache
+	if err := db.migrateLegacyCache(); err != nil {
+		return fmt.Errorf("migrating legacy food cache: %w", err)
 	}
 
 	return nil
@@ -222,6 +309,8 @@ func (db *DB) seedReferenceFoods() error {
 		{Name: "manteiga", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 717, Protein: 0.9, Carbs: 0.1, Fat: 81}},
 		{Name: "bread", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
 		{Name: "pao", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
+		{Name: "pao de forma", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
+		{Name: "sandwich bread", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
 	}
 
 	for _, f := range foods {
@@ -256,4 +345,49 @@ func parseTimestamp(ts string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+func (db *DB) seedCanonicalFoods() error {
+	now := time.Now()
+	// Seed known canonical foods
+	canonicalFoods := []struct {
+		name      string
+		normName  string
+		aliases   string
+		cat       string
+		foodType  models.FoodType
+		compHints string
+		amount    float64
+		unit      string
+	}{
+		{"cafe_com_leite", "café com leite", `["café com leite", "cafe com leite", "coffee with milk"]`, "beverage", models.FoodTypeBeverage, "milk", 200, "ml"},
+		{"ovo", "ovo", `["ovo", "egg", "boiled egg", "egg fried"]`, "protein", models.FoodTypeProtein, "egg", 1, "unit"},
+		{"banana", "banana", `["banana", "banana da terra", "banana prata"]`, "fruit", models.FoodTypeFruit, "fruit", 1, "unit"},
+		{"arroz_branco", "arroz branco", `["arroz branco", "white rice", "arroz"]`, "grain", models.FoodTypeGrain, "carb", 100, "gram"},
+		{"frango_grelhado", "frango grelhado", `["frango grelhado", "grilled chicken", "peito de frango"]`, "protein", models.FoodTypeProtein, "protein", 100, "gram"},
+		{"azeite", "azeite de oliva", `["azeite", "azeite de oliva", "olive oil"]`, "fat", models.FoodTypeComposite, "fat", 13, "ml"},
+		{"pao", "pão", `["pão", "pao", "bread", "pão francês"]`, "grain", models.FoodTypeGrain, "carb", 50, "gram"},
+		{"pao_de_forma", "pão de forma", `["pão de forma", "pao de forma", "sandwich bread", "sliced bread"]`, "grain", models.FoodTypeGrain, "carb", 25, "gram"},
+		{"cafe", "café", `["café", "cafe", "black coffee"]`, "beverage", models.FoodTypeBeverage, "coffee", 50, "ml"},
+	}
+
+	for _, cf := range canonicalFoods {
+		var id int64
+		err := db.conn.QueryRow("SELECT id FROM canonical_foods WHERE canonical_name = ?", cf.name).Scan(&id)
+		if err == sql.ErrNoRows {
+			_, err = db.conn.Exec(`
+				INSERT INTO canonical_foods (
+					canonical_name, normalized_name, aliases_json, language, category, food_type, composition_hints,
+					default_serving_amount, default_serving_unit, density_multiplier, grams_per_ml,
+					created_at, updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1.0, 1.0, ?, ?)`,
+				cf.name, cf.normName, cf.aliases, "en", cf.cat, string(cf.foodType), cf.compHints,
+				cf.amount, cf.unit, now, now,
+			)
+			if err != nil {
+				return fmt.Errorf("seeding canonical food %s: %w", cf.name, err)
+			}
+		}
+	}
+	return nil
 }

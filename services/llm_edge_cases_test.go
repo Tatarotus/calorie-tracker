@@ -235,9 +235,9 @@ func TestLLMService_ParseFoodItems_MalformedJSONWithNewlines(t *testing.T) {
 	malformedResponse := `{
   "items": [
     {
-      "name": "some food
+      "food_name": "some food
 with a newline",
-      "amount": 100,
+      "quantity": 100,
       "unit": "gram",
       "confidence": 0.95
     }
@@ -267,11 +267,11 @@ with a newline",
 	if len(items) != 1 {
 		t.Fatalf("Expected 1 item, got %d", len(items))
 	}
-	if items[0].Name != "food with newline" {
-		t.Errorf("Expected name 'food with newline', got %q", items[0].Name)
+	if items[0].FoodName != "food with newline" {
+		t.Errorf("Expected name 'food with newline', got %q", items[0].FoodName)
 	}
-	if items[0].Amount != 100 {
-		t.Errorf("Expected amount 100, got %f", items[0].Amount)
+	if items[0].Quantity != 100 {
+		t.Errorf("Expected amount 100, got %f", items[0].Quantity)
 	}
 	if items[0].Unit != "gram" {
 		t.Errorf("Expected unit 'gram', got %q", items[0].Unit)

@@ -153,6 +153,7 @@ func TestFoodParserParse(t *testing.T) {
 		{"1unidade de pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
 		{"2 unidades de ovo", ParsedFood{Amount: 2, Unit: "unit", Name: "ovo"}},
 		{"1u unit pão francês", ParsedFood{Amount: 1, Unit: "unit", Name: "pao frances"}},
+		{"2 fatias de pão de forma", ParsedFood{Amount: 2, Unit: "slice", Name: "pao de forma"}},
 		{"pão com manteiga", ParsedFood{Amount: 0, Unit: "", Name: "pao com manteiga"}},
 		{"pão de mel", ParsedFood{Amount: 0, Unit: "", Name: "pao de mel"}},
 		{"arroz e feijão", ParsedFood{Amount: 0, Unit: "", Name: "arroz e feijao"}},
@@ -190,5 +191,17 @@ func TestFoodParserParseMeal(t *testing.T) {
 		if got[i] != expected[i] {
 			t.Errorf("item %d = %#v, want %#v", i, got[i], expected[i])
 		}
+	}
+}
+
+func TestFoodParserParseMealForDisplay_PreservesInputLanguage(t *testing.T) {
+	p := NewFoodParser()
+
+	got := p.ParseMealForDisplay("200ml de café com leite")
+	if len(got) != 1 {
+		t.Fatalf("expected 1 display item, got %d", len(got))
+	}
+	if got[0].Name != "café com leite" {
+		t.Errorf("expected display name %q, got %q", "café com leite", got[0].Name)
 	}
 }

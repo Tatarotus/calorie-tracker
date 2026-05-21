@@ -8,13 +8,16 @@ import (
 	"calorie-tracker/models"
 )
 
+var SynonymMapperFunc func(string) string
+
 // Food operations
 
 func (db *DB) AddFoodEntry(entry models.FoodEntry) error {
 	_, err := db.conn.Exec(
-		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?)",
+		"INSERT INTO food_entries (timestamp, description, calories, protein, carbs, fat, original_query, normalized_query, canonical_key, resolution_trace) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		entry.Timestamp.UTC().Format(time.RFC3339Nano),
 		entry.Description, entry.Calories, entry.Protein, entry.Carbs, entry.Fat,
+		entry.OriginalQuery, entry.NormalizedQuery, entry.CanonicalKey, entry.ResolutionTrace,
 	)
 	return err
 }
@@ -26,7 +29,7 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 	endUTC := startUTC.Add(24 * time.Hour)
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? AND timestamp < ?",
+		"SELECT id, timestamp, description, calories, protein, carbs, fat, original_query, normalized_query, canonical_key, resolution_trace FROM food_entries WHERE timestamp >= ? AND timestamp < ?",
 		startUTC.Format(time.RFC3339Nano),
 		endUTC.Format(time.RFC3339Nano),
 	)
@@ -39,10 +42,23 @@ func (db *DB) GetDailyFoodEntries(t time.Time) ([]models.FoodEntry, error) {
 	for rows.Next() {
 		var e models.FoodEntry
 		var ts string
-		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+		var oq, nq, ck, rt sql.NullString
+		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat, &oq, &nq, &ck, &rt); err != nil {
 			return nil, err
 		}
 		e.Timestamp = parseTimestamp(ts).Local()
+		if oq.Valid {
+			e.OriginalQuery = oq.String
+		}
+		if nq.Valid {
+			e.NormalizedQuery = nq.String
+		}
+		if ck.Valid {
+			e.CanonicalKey = ck.String
+		}
+		if rt.Valid {
+			e.ResolutionTrace = rt.String
+		}
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -54,7 +70,7 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	rangeStartUTC := todayStart.AddDate(0, 0, -days).UTC()
 
 	rows, err := db.conn.Query(
-		"SELECT id, timestamp, description, calories, protein, carbs, fat FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
+		"SELECT id, timestamp, description, calories, protein, carbs, fat, original_query, normalized_query, canonical_key, resolution_trace FROM food_entries WHERE timestamp >= ? ORDER BY timestamp DESC",
 		rangeStartUTC.Format(time.RFC3339Nano),
 	)
 	if err != nil {
@@ -66,10 +82,23 @@ func (db *DB) GetFoodEntriesRange(days int) ([]models.FoodEntry, error) {
 	for rows.Next() {
 		var e models.FoodEntry
 		var ts string
-		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat); err != nil {
+		var oq, nq, ck, rt sql.NullString
+		if err := rows.Scan(&e.ID, &ts, &e.Description, &e.Calories, &e.Protein, &e.Carbs, &e.Fat, &oq, &nq, &ck, &rt); err != nil {
 			return nil, err
 		}
 		e.Timestamp = parseTimestamp(ts).Local()
+		if oq.Valid {
+			e.OriginalQuery = oq.String
+		}
+		if nq.Valid {
+			e.NormalizedQuery = nq.String
+		}
+		if ck.Valid {
+			e.CanonicalKey = ck.String
+		}
+		if rt.Valid {
+			e.ResolutionTrace = rt.String
+		}
 		entries = append(entries, e)
 	}
 	return entries, nil
@@ -348,4 +377,101 @@ func (db *DB) Close() error {
 		return nil
 	}
 	return db.conn.Close()
+}
+
+// migrateLegacyCache migrates old cache entries into canonical_foods & nutrition_cache
+func (db *DB) migrateLegacyCache() error {
+	var count int
+	// First check if food_cache table exists and has rows
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='food_cache'").Scan(&count)
+	if err != nil || count == 0 {
+		return nil
+	}
+
+	rows, err := db.conn.Query("SELECT description, base_quantity, unit, calories, protein, carbs, fat FROM food_cache")
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = rows.Close() }()
+
+	type cacheItem struct {
+		description sql.NullString
+		baseQty     sql.NullFloat64
+		unit        sql.NullString
+		calories    sql.NullFloat64
+		protein     sql.NullFloat64
+		carbs       sql.NullFloat64
+		fat         sql.NullFloat64
+	}
+
+	var items []cacheItem
+	for rows.Next() {
+		var item cacheItem
+		if scanErr := rows.Scan(&item.description, &item.baseQty, &item.unit, &item.calories, &item.protein, &item.carbs, &item.fat); scanErr != nil {
+			return scanErr
+		}
+		items = append(items, item)
+	}
+
+	now := time.Now()
+	for _, item := range items {
+		desc := item.description.String
+		if desc == "" {
+			continue
+		}
+		canonicalName := strings.ToLower(strings.TrimSpace(desc))
+		if SynonymMapperFunc != nil {
+			canonicalName = SynonymMapperFunc(desc)
+		}
+		if canonicalName == "" {
+			canonicalName = strings.ReplaceAll(strings.ToLower(strings.TrimSpace(desc)), " ", "_")
+		}
+
+		var canonicalID int64
+		err = db.conn.QueryRow("SELECT id FROM canonical_foods WHERE canonical_name = ?", canonicalName).Scan(&canonicalID)
+		if err == sql.ErrNoRows {
+			res, execErr := db.conn.Exec(`
+				INSERT INTO canonical_foods (
+					canonical_name, normalized_name, aliases_json, language, category, food_type, composition_hints,
+					default_serving_amount, default_serving_unit, density_multiplier, grams_per_ml,
+					created_at, updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				canonicalName, strings.ToLower(strings.TrimSpace(desc)), `["`+desc+`"]`, "en", "legacy", "", "",
+				item.baseQty.Float64, item.unit.String, 1.0, 1.0, now, now,
+			)
+			if execErr != nil {
+				return execErr
+			}
+			canonicalID, err = res.LastInsertId()
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+
+		var cacheID int64
+		err = db.conn.QueryRow("SELECT id FROM nutrition_cache WHERE canonical_food_id = ? AND serving_unit = ?", canonicalID, item.unit.String).Scan(&cacheID)
+		if err == sql.ErrNoRows {
+			_, err = db.conn.Exec(`
+				INSERT INTO nutrition_cache (
+					canonical_food_id, serving_amount, serving_unit,
+					calories, protein, carbs, fat, fiber,
+					source_type, source_confidence, source_reference, resolution_method,
+					created_at, updated_at
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				canonicalID, item.baseQty.Float64, item.unit.String,
+				item.calories.Float64, item.protein.Float64, item.carbs.Float64, item.fat.Float64, 0.0,
+				"legacy_cache", 1.0, "migrated from food_cache", "legacy_migration",
+				now, now,
+			)
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

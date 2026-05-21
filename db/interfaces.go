@@ -32,4 +32,18 @@ type DBProvider interface {
 	// Other operations
 	RemoveLastEntry() error
 	Close() error
+
+	// Canonical Food operations
+	GetCanonicalFood(id int64) (*models.CanonicalFood, error)
+	GetCanonicalFoodByName(name string) (*models.CanonicalFood, error)
+	SaveCanonicalFood(food *models.CanonicalFood) error
+	GetAllCanonicalFoods() ([]models.CanonicalFood, error)
+
+	// Nutrition Cache operations
+	GetNutritionCache(canonicalFoodID int64, unit string) (*models.NutritionCacheEntry, error)
+	SaveNutritionCache(entry *models.NutritionCacheEntry) error
+
+	// User Override operations
+	GetUserOverride(canonicalFoodID int64) (*models.UserOverrideEntry, error)
+	SaveUserOverride(override *models.UserOverrideEntry) error
 }

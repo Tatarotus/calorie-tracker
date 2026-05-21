@@ -23,6 +23,10 @@ var addCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("Error analyzing food: %v", err)
 		}
+		if preview.ResolutionTrace != nil && preview.ResolutionTrace.ResolutionMethod == "unresolved_fallback" {
+			fmt.Printf("Could not verify nutrition for %q; not saving entry.\n", description)
+			return
+		}
 
 		err = tracker.SaveFood(preview)
 		if err != nil {

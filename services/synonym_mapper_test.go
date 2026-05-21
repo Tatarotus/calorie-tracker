@@ -12,16 +12,16 @@ func TestSynonymMapperGetCanonical(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"exact match", "arroz branco", "arroz branco"},
-		{"synonym", "white rice", "arroz branco"},
-		{"case insensitive", "WHITE RICE", "arroz branco"},
-		{"with spaces", " white rice ", "arroz branco"},
-		{"unknown food", "unknown food xyz", "unknown food xyz"},
+		{"exact match", "arroz branco", "arroz_branco"},
+		{"synonym", "white rice", "arroz_branco"},
+		{"case insensitive", "WHITE RICE", "arroz_branco"},
+		{"with spaces", " white rice ", "arroz_branco"},
+		{"unknown food", "unknown food xyz", "unknown_food_xyz"},
 		{"portuguese egg", "ovo", "ovo"},
 		{"english egg", "egg", "ovo"},
 		{"portuguese plural egg", "ovos", "ovo"},
-		{"chicken breast", "chicken breast", "frango"},
-		{"peito de frango", "peito de frango", "frango"},
+		{"chicken breast", "chicken breast", "frango_grelhado"},
+		{"peito de frango", "peito de frango", "frango_grelhado"},
 		{"coffee", "coffee", "cafe"},
 		{"cafe", "cafe", "cafe"},
 	}
@@ -66,9 +66,9 @@ func TestSynonymMapperIsSynonym(t *testing.T) {
 func TestSynonymMapperGetSynonyms(t *testing.T) {
 	sm := NewSynonymMapper()
 
-	syns := sm.GetSynonyms("arroz branco")
+	syns := sm.GetSynonyms("arroz_branco")
 	if len(syns) == 0 {
-		t.Error("Expected synonyms for 'arroz branco', got none")
+		t.Error("Expected synonyms for 'arroz_branco', got none")
 	}
 
 	found := false

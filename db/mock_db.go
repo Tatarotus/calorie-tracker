@@ -10,22 +10,30 @@ import (
 
 // MockDB is an in-memory implementation of DBProvider for testing
 type MockDB struct {
-	mu           sync.RWMutex
-	foodEntries  []models.FoodEntry
-	waterEntries []models.WaterEntry
-	goal         *models.Goal
-	cache        map[string]models.ReferenceFood
-	reference    map[string]models.ReferenceFood
-	lastRemoved  *models.FoodEntry
-	errorOnCall  map[string]error // Track which operations should return errors
+	mu              sync.RWMutex
+	foodEntries     []models.FoodEntry
+	waterEntries    []models.WaterEntry
+	goal            *models.Goal
+	cache           map[string]models.ReferenceFood
+	reference       map[string]models.ReferenceFood
+	lastRemoved     *models.FoodEntry
+	errorOnCall     map[string]error // Track which operations should return errors
+	canonicalFoods  map[int64]models.CanonicalFood
+	nutritionCache  map[int64][]models.NutritionCacheEntry
+	userOverrides   map[int64]models.UserOverrideEntry
+	nextCanonicalID int64
 }
 
 // NewMockDB creates a new mock database
 func NewMockDB() *MockDB {
 	return &MockDB{
-		cache:       make(map[string]models.ReferenceFood),
-		reference:   make(map[string]models.ReferenceFood),
-		errorOnCall: make(map[string]error),
+		cache:           make(map[string]models.ReferenceFood),
+		reference:       make(map[string]models.ReferenceFood),
+		errorOnCall:     make(map[string]error),
+		canonicalFoods:  make(map[int64]models.CanonicalFood),
+		nutritionCache:  make(map[int64][]models.NutritionCacheEntry),
+		userOverrides:   make(map[int64]models.UserOverrideEntry),
+		nextCanonicalID: 1,
 	}
 }
 
@@ -130,7 +138,12 @@ func (m *MockDB) GetReferenceFood(name string) (*models.ReferenceFood, error) {
 
 	name = strings.ToLower(strings.TrimSpace(name))
 	for refName, ref := range m.reference {
-		if refName == name || strings.Contains(name, refName) {
+		if refName == name {
+			return &ref, nil
+		}
+	}
+	for refName, ref := range m.reference {
+		if strings.Contains(name, refName) {
 			return &ref, nil
 		}
 	}
@@ -331,6 +344,143 @@ func (m *MockDB) Clear() {
 	m.cache = make(map[string]models.ReferenceFood)
 	m.reference = make(map[string]models.ReferenceFood)
 	m.lastRemoved = nil
+	m.canonicalFoods = make(map[int64]models.CanonicalFood)
+	m.nutritionCache = make(map[int64][]models.NutritionCacheEntry)
+	m.userOverrides = make(map[int64]models.UserOverrideEntry)
+	m.nextCanonicalID = 1
+}
+
+// GetCanonicalFood implements DBProvider
+func (m *MockDB) GetCanonicalFood(id int64) (*models.CanonicalFood, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if err := m.errorOnCall["GetCanonicalFood"]; err != nil {
+		return nil, err
+	}
+	f, ok := m.canonicalFoods[id]
+	if !ok {
+		return nil, nil
+	}
+	return &f, nil
+}
+
+// GetCanonicalFoodByName implements DBProvider
+func (m *MockDB) GetCanonicalFoodByName(name string) (*models.CanonicalFood, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if err := m.errorOnCall["GetCanonicalFoodByName"]; err != nil {
+		return nil, err
+	}
+	name = strings.ToLower(strings.TrimSpace(name))
+	for _, f := range m.canonicalFoods {
+		if strings.ToLower(f.CanonicalName) == name {
+			return &f, nil
+		}
+	}
+	return nil, nil
+}
+
+// SaveCanonicalFood implements DBProvider
+func (m *MockDB) SaveCanonicalFood(food *models.CanonicalFood) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.errorOnCall["SaveCanonicalFood"]; err != nil {
+		return err
+	}
+	if food.ID == 0 {
+		food.ID = m.nextCanonicalID
+		m.nextCanonicalID++
+	}
+	m.canonicalFoods[food.ID] = *food
+	return nil
+}
+
+// GetAllCanonicalFoods implements DBProvider
+func (m *MockDB) GetAllCanonicalFoods() ([]models.CanonicalFood, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if err := m.errorOnCall["GetAllCanonicalFoods"]; err != nil {
+		return nil, err
+	}
+	var res []models.CanonicalFood
+	for _, f := range m.canonicalFoods {
+		res = append(res, f)
+	}
+	return res, nil
+}
+
+// GetNutritionCache implements DBProvider
+func (m *MockDB) GetNutritionCache(canonicalFoodID int64, unit string) (*models.NutritionCacheEntry, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if err := m.errorOnCall["GetNutritionCache"]; err != nil {
+		return nil, err
+	}
+	list := m.nutritionCache[canonicalFoodID]
+	unit = strings.ToLower(strings.TrimSpace(unit))
+	for _, c := range list {
+		if strings.ToLower(c.ServingUnit) == unit {
+			return &c, nil
+		}
+	}
+	if len(list) > 0 {
+		return &list[0], nil
+	}
+	return nil, nil
+}
+
+// SaveNutritionCache implements DBProvider
+func (m *MockDB) SaveNutritionCache(entry *models.NutritionCacheEntry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.errorOnCall["SaveNutritionCache"]; err != nil {
+		return err
+	}
+	if entry.ID == 0 {
+		entry.ID = int64(len(m.nutritionCache[entry.CanonicalFoodID]) + 1)
+	}
+	list := m.nutritionCache[entry.CanonicalFoodID]
+	updated := false
+	for i, c := range list {
+		if c.ID == entry.ID || strings.EqualFold(c.ServingUnit, entry.ServingUnit) {
+			list[i] = *entry
+			updated = true
+			break
+		}
+	}
+	if !updated {
+		list = append(list, *entry)
+	}
+	m.nutritionCache[entry.CanonicalFoodID] = list
+	return nil
+}
+
+// GetUserOverride implements DBProvider
+func (m *MockDB) GetUserOverride(canonicalFoodID int64) (*models.UserOverrideEntry, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if err := m.errorOnCall["GetUserOverride"]; err != nil {
+		return nil, err
+	}
+	o, ok := m.userOverrides[canonicalFoodID]
+	if !ok {
+		return nil, nil
+	}
+	return &o, nil
+}
+
+// SaveUserOverride implements DBProvider
+func (m *MockDB) SaveUserOverride(override *models.UserOverrideEntry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.errorOnCall["SaveUserOverride"]; err != nil {
+		return err
+	}
+	if override.ID == 0 {
+		override.ID = int64(len(m.userOverrides) + 1)
+	}
+	m.userOverrides[override.CanonicalFoodID] = *override
+	return nil
 }
 
 // Error for no goal found

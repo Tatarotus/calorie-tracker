@@ -1,67 +1,13 @@
 package services
 
 import (
+	"encoding/json"
 	"testing"
+	"time"
 
 	"calorie-tracker/db"
 	"calorie-tracker/models"
 )
-
-func TestNutritionEngine_ValidateMacros(t *testing.T) {
-	mockDB := db.NewMockDB()
-	engine := NewNutritionEngine(mockDB, nil)
-
-	tests := []struct {
-		name    string
-		macros  models.Macros
-		wantErr bool
-	}{
-		{
-			name:    "valid macros",
-			macros:  models.Macros{Calories: 100, Protein: 5, Carbs: 20, Fat: 3},
-			wantErr: false,
-		},
-		{
-			name:    "negative calories",
-			macros:  models.Macros{Calories: -1, Protein: 5, Carbs: 20, Fat: 3},
-			wantErr: true,
-		},
-		{
-			name:    "negative protein",
-			macros:  models.Macros{Calories: 100, Protein: -1, Carbs: 20, Fat: 3},
-			wantErr: true,
-		},
-		{
-			name:    "negative carbs",
-			macros:  models.Macros{Calories: 100, Protein: 5, Carbs: -1, Fat: 3},
-			wantErr: true,
-		},
-		{
-			name:    "negative fat",
-			macros:  models.Macros{Calories: 100, Protein: 5, Carbs: 20, Fat: -1},
-			wantErr: true,
-		},
-		{
-			name:    "too high calories",
-			macros:  models.Macros{Calories: 5001, Protein: 5, Carbs: 20, Fat: 3},
-			wantErr: true,
-		},
-		{
-			name:    "zero calories ok",
-			macros:  models.Macros{Calories: 0, Protein: 0, Carbs: 0, Fat: 0},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := engine.validateMacros(tt.macros)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateMacros() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
 func TestNutritionEngine_FormatDescription(t *testing.T) {
 	mockDB := db.NewMockDB()
@@ -78,6 +24,8 @@ func TestNutritionEngine_FormatDescription(t *testing.T) {
 		{"multiple units", 2, "unit", "apple", "2.0 apple"},
 		{"grams", 100, "gram", "rice", "100.0g rice"},
 		{"cups", 1, "cup", "water", "1.0cup water"},
+		{"single slice", 1, "slice", "pão de forma", "1 fatia de pão de forma"},
+		{"multiple slices", 2, "slice", "pão de forma", "2 fatias de pão de forma"},
 		{"empty unit single", 1, "", "banana", "1 banana"},
 		{"empty unit multiple", 2, "", "banana", "2.0 banana"},
 	}
@@ -92,117 +40,6 @@ func TestNutritionEngine_FormatDescription(t *testing.T) {
 	}
 }
 
-func TestNutritionEngine_ScaledAmount(t *testing.T) {
-	mockDB := db.NewMockDB()
-	engine := NewNutritionEngine(mockDB, nil)
-
-	tests := []struct {
-		name            string
-		ref             models.ReferenceFood
-		parsed          ParsedFood
-		allowEstimation bool
-		wantAmount      float64
-		wantOK          bool
-	}{
-		{
-			name:            "zero amount returns base quantity",
-			ref:             models.ReferenceFood{BaseQuantity: 100, Unit: "gram"},
-			parsed:          ParsedFood{Amount: 0, Unit: "gram"},
-			allowEstimation: true,
-			wantAmount:      100,
-			wantOK:          true,
-		},
-		{
-			name:            "matching units",
-			ref:             models.ReferenceFood{BaseQuantity: 100, Unit: "gram"},
-			parsed:          ParsedFood{Amount: 50, Unit: "gram"},
-			allowEstimation: true,
-			wantAmount:      50,
-			wantOK:          true,
-		},
-		{
-			name:            "empty parsed unit with gram ref",
-			ref:             models.ReferenceFood{BaseQuantity: 100, Unit: "gram"},
-			parsed:          ParsedFood{Amount: 50, Unit: ""},
-			allowEstimation: true,
-			wantAmount:      50,
-			wantOK:          true,
-		},
-		{
-			name:            "unit to gram estimation",
-			ref:             models.ReferenceFood{BaseQuantity: 100, Unit: "gram"},
-			parsed:          ParsedFood{Amount: 1, Unit: "unit", Name: "ovo"},
-			allowEstimation: true,
-			wantAmount:      50, // egg override
-			wantOK:          true,
-		},
-		{
-			name:            "no estimation allowed",
-			ref:             models.ReferenceFood{BaseQuantity: 100, Unit: "gram"},
-			parsed:          ParsedFood{Amount: 1, Unit: "unit", Name: "ovo"},
-			allowEstimation: false,
-			wantAmount:      0,
-			wantOK:          false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, ok := engine.scaledAmount(tt.ref, tt.parsed, tt.allowEstimation)
-			if got != tt.wantAmount || ok != tt.wantOK {
-				t.Errorf("scaledAmount() = (%v, %v), want (%v, %v)", got, ok, tt.wantAmount, tt.wantOK)
-			}
-		})
-	}
-}
-
-func TestNutritionEngine_ResolveDeterministically(t *testing.T) {
-	mockDB := db.NewMockDB()
-	// Seed reference foods
-	mockDB.SeedReferenceFood(models.ReferenceFood{
-		Name:         "arroz branco",
-		BaseQuantity: 100,
-		Unit:         "gram",
-		Macros:       models.Macros{Calories: 130, Protein: 2.7, Carbs: 28, Fat: 0.3},
-	})
-
-	engine := NewNutritionEngine(mockDB, nil)
-
-	items := []ParsedFood{
-		{Amount: 100, Unit: "gram", Name: "arroz branco"},
-	}
-
-	preview, ok, err := engine.resolveDeterministically(items)
-	if err != nil {
-		t.Fatalf("resolveDeterministically() error = %v", err)
-	}
-	if !ok {
-		t.Fatal("resolveDeterministically() expected ok = true")
-	}
-	if preview == nil {
-		t.Fatal("resolveDeterministically() expected non-nil preview")
-	}
-	if preview.Calories != 130 {
-		t.Errorf("expected 130 calories, got %f", preview.Calories)
-	}
-}
-
-func TestNutritionEngine_ResolveSingle_EmptyName(t *testing.T) {
-	mockDB := db.NewMockDB()
-	engine := NewNutritionEngine(mockDB, nil)
-
-	preview, ok, err := engine.resolveSingle(ParsedFood{Name: ""})
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if ok {
-		t.Error("expected ok = false for empty name")
-	}
-	if preview != nil {
-		t.Error("expected nil preview for empty name")
-	}
-}
-
 func TestNutritionEngine_Analyze_EmptyItems(t *testing.T) {
 	mockDB := db.NewMockDB()
 	engine := NewNutritionEngine(mockDB, nil)
@@ -210,5 +47,214 @@ func TestNutritionEngine_Analyze_EmptyItems(t *testing.T) {
 	_, err := engine.Analyze("   ")
 	if err == nil {
 		t.Error("expected error for empty/whitespace input")
+	}
+}
+
+func TestNutritionEngine_UserOverridePrecedence(t *testing.T) {
+	mockDB := db.NewMockDB()
+
+	// Seed canonical food
+	cf := &models.CanonicalFood{
+		ID:             123,
+		CanonicalName:  "cafe_com_leite",
+		NormalizedName: "cafe com leite",
+		Language:       "pt",
+		Category:       "beverage",
+	}
+	_ = mockDB.SaveCanonicalFood(cf)
+
+	// Save user override (Calories = 50)
+	override := &models.UserOverrideEntry{
+		CanonicalFoodID: 123,
+		ServingAmount:   100.0,
+		ServingUnit:     "ml",
+		Calories:        50,
+		Protein:         2,
+		Carbs:           6,
+		Fat:             1,
+		OverrideReason:  "my custom recipe",
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+	_ = mockDB.SaveUserOverride(override)
+
+	// Seed normal cache (Calories = 100) - user override should take precedence!
+	cacheEntry := &models.NutritionCacheEntry{
+		CanonicalFoodID: 123,
+		ServingAmount:   100.0,
+		ServingUnit:     "ml",
+		Calories:        100,
+		Protein:         4,
+		Carbs:           12,
+		Fat:             2,
+		SourceType:      "fatsecret",
+		UpdatedAt:       time.Now(),
+	}
+	_ = mockDB.SaveNutritionCache(cacheEntry)
+
+	engine := NewNutritionEngine(mockDB, nil)
+
+	preview, err := engine.Analyze("100ml cafe com leite")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if preview == nil {
+		t.Fatal("expected non-nil preview")
+	}
+
+	bz, _ := json.MarshalIndent(preview, "", "  ")
+	t.Logf("ACTUAL PREVIEW: %s", string(bz))
+
+	if preview.Calories != 50 {
+		t.Errorf("expected 50 calories (user override), got %f (cache/other)", preview.Calories)
+	}
+
+	if preview.ResolutionTrace == nil {
+		t.Fatal("expected non-nil resolution trace")
+	}
+
+	if preview.ResolutionTrace.ResolutionMethod != "user_override" {
+		t.Errorf("expected resolution method 'user_override', got %q", preview.ResolutionTrace.ResolutionMethod)
+	}
+}
+
+func TestNutritionEngine_SemanticTokenCheckProtection(t *testing.T) {
+	// cafe com leite (parsed) vs black coffee (resolved) should be rejected
+	if semanticTokenCheck("cafe com leite", "black coffee") {
+		t.Error("expected rejection of 'black coffee' for 'cafe com leite'")
+	}
+
+	// cafe com leite vs cafe com leite integral should be accepted
+	if !semanticTokenCheck("cafe com leite", "cafe com leite integral") {
+		t.Error("expected acceptance of 'cafe com leite integral' for 'cafe com leite'")
+	}
+
+	// bread vs apple should be rejected
+	if semanticTokenCheck("bread", "apple") {
+		t.Error("expected rejection of 'apple' for 'bread'")
+	}
+}
+
+func TestNutritionEngine_ConfidenceAggregation(t *testing.T) {
+	mockDB := db.NewMockDB()
+	engine := NewNutritionEngine(mockDB, nil)
+
+	// Check confidence when unresolved_fallback is triggered (should be 0.0)
+	preview, err := engine.Analyze("100g unknownweirdfood")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if preview == nil {
+		t.Fatal("expected non-nil preview")
+	}
+
+	if preview.Confidence != 0.0 {
+		t.Errorf("expected 0.0 confidence for unresolved fallback, got %f", preview.Confidence)
+	}
+
+	if preview.Calories != 0.0 || preview.Protein != 0.0 {
+		t.Errorf("expected 0 macros for unresolved fallback to enforce correctness > coverage, got calories=%f", preview.Calories)
+	}
+}
+
+func TestSynonymMapper_DynamicAliasLoading(t *testing.T) {
+	mockDB := db.NewMockDB()
+
+	// Seed custom canonical food with aliases in database
+	cf := &models.CanonicalFood{
+		CanonicalName:  "my_custom_food",
+		NormalizedName: "my custom food",
+		AliasesJSON:    `["custom alias 1", "custom alias 2"]`,
+	}
+	_ = mockDB.SaveCanonicalFood(cf)
+
+	// Instantiating synonym mapper and loading from DB
+	sm := NewSynonymMapper()
+	err := sm.LoadFromDatabase(mockDB)
+	if err != nil {
+		t.Fatalf("unexpected error loading from DB: %v", err)
+	}
+
+	if canonical := sm.GetCanonical("custom alias 1"); canonical != "my_custom_food" {
+		t.Errorf("expected 'my_custom_food' for 'custom alias 1', got %q", canonical)
+	}
+
+	if canonical := sm.GetCanonical("custom alias 2"); canonical != "my_custom_food" {
+		t.Errorf("expected 'my_custom_food' for 'custom alias 2', got %q", canonical)
+	}
+}
+
+func TestTrackerService_SaveFood_LineageAndOverride(t *testing.T) {
+	mockDB := db.NewMockDB()
+	tracker := NewTrackerService(mockDB, nil)
+
+	preview := &models.FoodPreview{
+		Name:        "banana",
+		Unit:        "unit",
+		Description: "2 banana",
+		Calories:    178,
+		Protein:     2.2,
+		Carbs:       46,
+		Fat:         0.6,
+		UserEdited:  true,
+		ResolutionTrace: &models.ResolutionTrace{
+			ParserUsed:       "llm",
+			CanonicalKey:     "banana",
+			ResolutionMethod: "local_cache",
+			SourceType:       "legacy_cache",
+			SourceConfidence: 1.0,
+		},
+	}
+
+	err := tracker.SaveFood(preview)
+	if err != nil {
+		t.Fatalf("SaveFood failed: %v", err)
+	}
+
+	// Verify food entry lineage was logged in DB
+	entries, err := mockDB.GetDailyFoodEntries(time.Now())
+	if err != nil {
+		t.Fatalf("GetDailyFoodEntries failed: %v", err)
+	}
+
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+
+	logged := entries[0]
+	if logged.OriginalQuery != "2 banana" {
+		t.Errorf("expected OriginalQuery '2 banana', got %q", logged.OriginalQuery)
+	}
+	if logged.CanonicalKey != "banana" {
+		t.Errorf("expected CanonicalKey 'banana', got %q", logged.CanonicalKey)
+	}
+
+	var trace models.ResolutionTrace
+	err = json.Unmarshal([]byte(logged.ResolutionTrace), &trace)
+	if err != nil {
+		t.Fatalf("failed to unmarshal trace JSON: %v", err)
+	}
+
+	if trace.CanonicalKey != "banana" || trace.ParserUsed != "llm" {
+		t.Errorf("unmarshaled trace fields incorrect: %+v", trace)
+	}
+
+	// Verify UserOverrideEntry was persisted because UserEdited was true
+	override, err := mockDB.GetUserOverride(1) // Banana's canonical ID in mockDB will be 1
+	if err != nil {
+		t.Fatalf("GetUserOverride failed: %v", err)
+	}
+
+	if override == nil {
+		t.Fatal("expected user override to be persisted, but got nil")
+	}
+
+	// Scaling check: 2 bananas (amount=2) edited to have 178 calories.
+	// Base quantity is 1 unit. Factor = 1 / 2 = 0.5.
+	// Override base calories = 178 * 0.5 = 89.
+	if override.Calories != 89 {
+		t.Errorf("expected override calories scaled to base unit to be 89, got %f", override.Calories)
 	}
 }

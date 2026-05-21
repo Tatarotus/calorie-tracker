@@ -245,6 +245,37 @@ func TestTrackerService_ParseFood_LLMFallback(t *testing.T) {
 	}
 }
 
+func TestTrackerService_SaveFood_DoesNotCacheLLMFallback(t *testing.T) {
+	mockDB := db.NewMockDB()
+	tracker := NewTrackerService(mockDB, nil)
+
+	preview := &models.FoodPreview{
+		Description: "200.0g aipim frito",
+		Calories:    140,
+		Protein:     3,
+		Carbs:       34,
+		Fat:         0.4,
+		ResolutionTrace: &models.ResolutionTrace{
+			CanonicalKey:     "macaxeira",
+			ResolutionMethod: "llm_fallback",
+			SourceType:       "llm",
+			SourceConfidence: 0.60,
+		},
+	}
+
+	if err := tracker.SaveFood(preview); err != nil {
+		t.Fatalf("SaveFood failed: %v", err)
+	}
+
+	cached, err := mockDB.GetCachedFood("aipim frito")
+	if err != nil {
+		t.Fatalf("GetCachedFood failed: %v", err)
+	}
+	if cached != nil {
+		t.Fatal("expected LLM fallback to avoid legacy cache writes")
+	}
+}
+
 func TestTrackerService_RunReview_Success(t *testing.T) {
 	mockDB := db.NewMockDB()
 	_ = mockDB.SetGoal(models.Goal{Description: "Lose weight"})

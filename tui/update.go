@@ -336,6 +336,7 @@ func (m *Model) setupEditInput() {
 
 func (m *Model) updatePendingFoodFromEdit() {
 	val, _ := strconv.ParseFloat(m.EditInput.Value(), 64)
+	m.PendingFood.UserEdited = true
 	switch m.EditField {
 	case 0:
 		m.PendingFood.Calories = val

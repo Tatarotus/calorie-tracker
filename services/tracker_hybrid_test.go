@@ -26,6 +26,17 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 			Protein:  2.7,
 		},
 	})
+	mockDB.SeedReferenceFood(models.ReferenceFood{
+		Name:         "pao de forma",
+		BaseQuantity: 100,
+		Unit:         "gram",
+		Macros: models.Macros{
+			Calories: 265,
+			Protein:  9,
+			Carbs:    49,
+			Fat:      3.2,
+		},
+	})
 
 	t.Run("Priority 1: Reference DB match with scaling", func(t *testing.T) {
 		engine := NewNutritionEngine(mockDB, nil)
@@ -138,7 +149,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 			t.Fatalf("Analyze failed: %v", err)
 		}
 
-		if preview.Description != "1 pao frances" {
+		if preview.Description != "1 pão francês" {
 			t.Errorf("Expected unit description, got %q", preview.Description)
 		}
 
@@ -147,7 +158,7 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 		}
 	})
 
-	t.Run("Priority 3: LLM Fallback and caching", func(t *testing.T) {
+	t.Run("Last resort: LLM fallback is not cached", func(t *testing.T) {
 		// Mock LLM server
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = fmt.Fprintln(w, `{"choices":[{"message":{"content":"{\"name\":\"fruta magica\",\"base_quantity\":100,\"unit\":\"g\",\"macros\":{\"calories\":50,\"protein\":1,\"carbs\":10,\"fat\":0}}"}}]}`)
@@ -171,13 +182,9 @@ func TestNutritionEngine_HybridFlow(t *testing.T) {
 			t.Errorf("Expected 100 calories (scaled from LLM base), got %f", preview.Calories)
 		}
 
-		// Verify it was cached as base ReferenceFood
 		cached, _ := mockDB.GetCachedFood("fruta magica")
-		if cached == nil {
-			t.Fatal("Expected LLM result to be cached")
-		}
-		if cached.Macros.Calories != 50 {
-			t.Errorf("Expected cached base calories to be 50, got %f", cached.Macros.Calories)
+		if cached != nil {
+			t.Fatal("Expected LLM-only result to avoid cache writes")
 		}
 	})
 

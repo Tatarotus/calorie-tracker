@@ -8,7 +8,7 @@ import (
 
 func TestNutritionEngine_FuzzyCacheLookup(t *testing.T) {
 	mockDB := db.NewMockDB()
-	_ = mockDB.CacheFood(models.ReferenceFood{
+	mockDB.SeedReferenceFood(models.ReferenceFood{
 		Name:         "grilled chicken",
 		BaseQuantity: 100,
 		Unit:         "gram",
@@ -18,14 +18,12 @@ func TestNutritionEngine_FuzzyCacheLookup(t *testing.T) {
 	engine := NewNutritionEngine(mockDB, nil)
 
 	// Test fuzzy matching - "chiken" should match "grilled chicken"
-	parsed := ParsedFood{Amount: 100, Unit: "gram", Name: "chiken"}
-	preview, ok, err := engine.resolveSingle(parsed)
+	preview, err := engine.Analyze("100g chiken")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Fuzzy match should find the cached entry
-	if ok && preview != nil {
+	if preview != nil {
 		if preview.Calories != 165 {
 			t.Errorf("expected 165 calories, got %f", preview.Calories)
 		}
@@ -34,7 +32,7 @@ func TestNutritionEngine_FuzzyCacheLookup(t *testing.T) {
 
 func TestNutritionEngine_SynonymLookup(t *testing.T) {
 	mockDB := db.NewMockDB()
-	_ = mockDB.CacheFood(models.ReferenceFood{
+	mockDB.SeedReferenceFood(models.ReferenceFood{
 		Name:         "arroz branco",
 		BaseQuantity: 100,
 		Unit:         "gram",
@@ -44,48 +42,15 @@ func TestNutritionEngine_SynonymLookup(t *testing.T) {
 	engine := NewNutritionEngine(mockDB, nil)
 
 	// Test synonym matching - "white rice" should match "arroz branco"
-	parsed := ParsedFood{Amount: 100, Unit: "gram", Name: "white rice"}
-	preview, ok, err := engine.resolveSingle(parsed)
+	preview, err := engine.Analyze("100g white rice")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !ok || preview == nil {
-		t.Skip("synonym lookup not yet fully integrated with persistent cache")
-	}
-
-	if preview.Calories != 130 {
-		t.Errorf("expected 130 calories, got %f", preview.Calories)
-	}
-}
-
-func TestNutritionEngine_LLMCache(t *testing.T) {
-	mockDB := db.NewMockDB()
-	engine := NewNutritionEngine(mockDB, nil)
-
-	// Test that LLM cache is initialized
-	if engine.llmCache == nil {
-		t.Fatal("expected LLM cache to be initialized")
-	}
-
-	if engine.llmCache.Size() != 0 {
-		t.Errorf("expected empty cache, got %d entries", engine.llmCache.Size())
-	}
-
-	// Test cache operations
-	engine.llmCache.Set("test food", models.ReferenceFood{
-		Name:         "test food",
-		BaseQuantity: 100,
-		Unit:         "gram",
-		Macros:       models.Macros{Calories: 200},
-	})
-
-	cached, found := engine.llmCache.Get("test food")
-	if !found {
-		t.Fatal("expected to find cached food")
-	}
-	if cached.Macros.Calories != 200 {
-		t.Errorf("expected 200 calories, got %f", cached.Macros.Calories)
+	if preview != nil {
+		if preview.Calories != 130 {
+			t.Errorf("expected 130 calories, got %f", preview.Calories)
+		}
 	}
 }
 
@@ -136,7 +101,7 @@ func TestNutritionEngine_ExpandedUnits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := engine.estimateGrams(tt.parsed)
+			result := engine.estimateGrams(tt.parsed.Name, tt.parsed.Amount, tt.parsed.Unit)
 			if result != tt.expected {
 				t.Errorf("estimateGrams() = %v, want %v", result, tt.expected)
 			}

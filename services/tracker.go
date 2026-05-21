@@ -1,11 +1,13 @@
 package services
 
 import (
+	"encoding/json"
+	"strings"
+	"time"
+
 	"calorie-tracker/config"
 	"calorie-tracker/db"
 	"calorie-tracker/models"
-	"strings"
-	"time"
 )
 
 type TrackerService struct {
@@ -45,35 +47,51 @@ func (s *TrackerService) ParseFood(description string) (*models.FoodPreview, err
 }
 
 func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
+	var originalQuery string
+	var normalizedQuery string
+	var canonicalKey string
+	var traceJSON string
+
+	if preview.ResolutionTrace != nil {
+		canonicalKey = preview.ResolutionTrace.CanonicalKey
+		if b, err := json.Marshal(preview.ResolutionTrace); err == nil {
+			traceJSON = string(b)
+		}
+	}
+
+	name, unit, amount := s.extractNameUnitAmount(preview)
+
+	// Lineage logging parameters
+	originalQuery = preview.Description
+	normalizedQuery = strings.ToLower(strings.TrimSpace(name))
+	if normalizedQuery == "" {
+		normalizedQuery = strings.ToLower(strings.TrimSpace(preview.Description))
+	}
+
 	entry := models.FoodEntry{
-		Timestamp:   time.Now(),
-		Description: preview.Description,
-		Calories:    preview.Calories,
-		Protein:     preview.Protein,
-		Carbs:       preview.Carbs,
-		Fat:         preview.Fat,
+		Timestamp:       time.Now(),
+		Description:     preview.Description,
+		Calories:        preview.Calories,
+		Protein:         preview.Protein,
+		Carbs:           preview.Carbs,
+		Fat:             preview.Fat,
+		OriginalQuery:   originalQuery,
+		NormalizedQuery: normalizedQuery,
+		CanonicalKey:    canonicalKey,
+		ResolutionTrace: traceJSON,
 	}
 
 	if err := s.db.AddFoodEntry(entry); err != nil {
 		return err
 	}
 
-	// Use provided Name/Unit if available, otherwise parse
-	name := preview.Name
-	unit := preview.Unit
-	amount := 0.0
-
-	if name == "" {
-		parsed := s.engine.parser.Parse(preview.Description)
-		name = parsed.Name
-		unit = parsed.Unit
-		amount = parsed.Amount
-	} else {
-		// If Name is provided, we need to extract the amount from description
-		// or assume 1 if not easily parsable from preview.
-		// For consistency, let's parse the description anyway to get the amount.
-		parsed := s.engine.parser.Parse(preview.Description)
-		amount = parsed.Amount
+	// Resolve the CanonicalFood entry for the override
+	var canonicalID int64
+	if name != "" {
+		cf, err := s.engine.canonicalResolver.Resolve(name)
+		if err == nil && cf != nil {
+			canonicalID = cf.ID
+		}
 	}
 
 	if name != "" && amount > 0 {
@@ -83,21 +101,94 @@ func (s *TrackerService) SaveFood(preview *models.FoodPreview) error {
 		}
 
 		factor := baseQuantity / amount
+		refMacros := models.Macros{
+			Calories: preview.Calories * factor,
+			Protein:  preview.Protein * factor,
+			Carbs:    preview.Carbs * factor,
+			Fat:      preview.Fat * factor,
+		}
+
 		cacheEntry := models.ReferenceFood{
 			Name:         name,
 			BaseQuantity: baseQuantity,
 			Unit:         unit,
-			Macros: models.Macros{
-				Calories: preview.Calories * factor,
-				Protein:  preview.Protein * factor,
-				Carbs:    preview.Carbs * factor,
-				Fat:      preview.Fat * factor,
-			},
+			Macros:       refMacros,
 		}
-		_ = s.db.CacheFood(cacheEntry)
+		if shouldCacheSavedPreview(preview) {
+			_ = s.db.CacheFood(cacheEntry)
+		}
+
+		// If the preview was edited, persist a new entry in the user_overrides database table
+		if preview.UserEdited && canonicalID != 0 {
+			override := &models.UserOverrideEntry{
+				CanonicalFoodID: canonicalID,
+				ServingAmount:   baseQuantity,
+				ServingUnit:     unit,
+				Calories:        refMacros.Calories,
+				Protein:         refMacros.Protein,
+				Carbs:           refMacros.Carbs,
+				Fat:             refMacros.Fat,
+				OverrideReason:  "user_edited",
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			}
+			_ = s.db.SaveUserOverride(override)
+		}
 	}
 
 	return nil
+}
+
+func shouldCacheSavedPreview(preview *models.FoodPreview) bool {
+	if preview == nil {
+		return false
+	}
+	if preview.UserEdited {
+		return true
+	}
+	if preview.ResolutionTrace == nil {
+		return true
+	}
+	switch preview.ResolutionTrace.SourceType {
+	case "fatsecret", "serpapi_fallback", "user_override":
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *TrackerService) extractNameUnitAmount(preview *models.FoodPreview) (string, string, float64) {
+	name := preview.Name
+	unit := preview.Unit
+	amount := 0.0
+
+	var parsedItems []ParsedFoodItem
+	var parseErr error
+	if preview.Description != "" {
+		parsedItems, parseErr = s.engine.parser.Parse(preview.Description)
+	}
+
+	if parseErr == nil && len(parsedItems) > 0 {
+		amount = parsedItems[0].Quantity
+		if name == "" {
+			name = parsedItems[0].FoodName
+		}
+		if unit == "" {
+			unit = parsedItems[0].Unit
+		}
+	} else {
+		// Fallback to basic regex parser
+		bp := NewFoodParser()
+		parsed := bp.Parse(preview.Description)
+		amount = parsed.Amount
+		if name == "" {
+			name = parsed.Name
+		}
+		if unit == "" {
+			unit = parsed.Unit
+		}
+	}
+	return name, unit, amount
 }
 
 func (s *TrackerService) AddWater(amountML float64) error {

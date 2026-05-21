@@ -80,18 +80,14 @@ func TestFullFoodTrackingFlow(t *testing.T) {
 		t.Errorf("Expected 350 calories, got %f", entry.Calories)
 	}
 
-	// Step 4: Verify cache was updated
+	// Step 4: LLM-only nutrition should not be cached as trusted data.
 	cached, err := testDB.GetCachedFood("apple")
 	if err != nil {
 		t.Fatalf("Failed to get cached food: %v", err)
 	}
 
-	if cached == nil {
-		t.Fatal("Expected cached entry")
-	}
-
-	if cached.Macros.Calories != 350 {
-		t.Errorf("Expected cached calories 350, got %f", cached.Macros.Calories)
+	if cached != nil {
+		t.Fatal("Expected LLM-only result to avoid cache writes")
 	}
 }
 

@@ -13,10 +13,10 @@ func TestSynonymMapper_GetCanonical_Accented(t *testing.T) {
 		expected string
 	}{
 		{"accented cafe", "café", "cafe"},
-		{"accented pao", "pão", "pao"},
+		{"accented pao", "pão", "pao_frances"},
 		{"accented maca", "maçã", "maca"},
-		{"accented acai", "açaí", "açaí"}, // açaí is not in the default mappings, so it returns itself
-		{"accented frango", "frangô", "frango"},
+		{"accented acai", "açaí", "acai"}, // açaí is not in the default mappings, so it returns its normalized form
+		{"accented frango", "frangô", "frango_grelhado"},
 	}
 
 	for _, tt := range tests {

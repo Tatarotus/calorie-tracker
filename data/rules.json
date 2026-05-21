@@ -44,6 +44,7 @@
     "slice": {
       "default": 30,
       "overrides": [
+        { "terms": ["pao de forma", "sandwich bread"], "value": 25 },
         { "terms": ["bread", "pao"], "value": 32 },
         { "terms": ["cheese", "queijo"], "value": 28 },
         { "terms": ["apple", "maca"], "value": 182 },

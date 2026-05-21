@@ -15,3 +15,5 @@ lint_annotations.json
 test_annotations.json
 gh_log.txt
 job_log.txt
+build/
+.antigravitycli/

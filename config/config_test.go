@@ -13,8 +13,8 @@ func TestLoad(t *testing.T) {
 	// Save original env vars
 	origNVIDIA := os.Getenv("NVIDIA_API_KEY")
 	origOPENAI_BASE := os.Getenv("OPENAI_BASE_URL")
-	origOPENAI_MODEL := os.Getenv("OPENAI_MODEL")
-	origOPENAI_MODEL2 := os.Getenv("OPENAI_MODEL2")
+	origFOOD_MODEL := os.Getenv("FOOD_MODEL")
+	origREVIEW_MODEL := os.Getenv("REVIEW_MODEL")
 	origFatSecretClientID := os.Getenv("FATSECRET_CLIENT_ID")
 	origFatSecretClientSecret := os.Getenv("FATSECRET_CLIENT_SECRET")
 	origFatSecretScope := os.Getenv("FATSECRET_SCOPE")
@@ -24,8 +24,8 @@ func TestLoad(t *testing.T) {
 	defer func() {
 		_ = os.Setenv("NVIDIA_API_KEY", origNVIDIA)
 		_ = os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
-		_ = os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
-		_ = os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
+		_ = os.Setenv("FOOD_MODEL", origFOOD_MODEL)
+		_ = os.Setenv("REVIEW_MODEL", origREVIEW_MODEL)
 		_ = os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
 		_ = os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
 		_ = os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
@@ -37,8 +37,8 @@ func TestLoad(t *testing.T) {
 	// Clear env vars to test defaults
 	_ = os.Unsetenv("NVIDIA_API_KEY")
 	_ = os.Unsetenv("OPENAI_BASE_URL")
-	_ = os.Unsetenv("OPENAI_MODEL")
-	_ = os.Unsetenv("OPENAI_MODEL2")
+	_ = os.Unsetenv("FOOD_MODEL")
+	_ = os.Unsetenv("REVIEW_MODEL")
 	_ = os.Unsetenv("FATSECRET_CLIENT_ID")
 	_ = os.Unsetenv("FATSECRET_CLIENT_SECRET")
 	_ = os.Unsetenv("FATSECRET_SCOPE")
@@ -51,10 +51,10 @@ func TestLoad(t *testing.T) {
 	if cfg.OpenAIBaseURL != "https://integrate.api.nvidia.com/v1" {
 		t.Errorf("Expected default OpenAIBaseURL, got %s", cfg.OpenAIBaseURL)
 	}
-	if cfg.FoodModel != "meta/llama-3.3-70b-instruct" {
+	if cfg.FoodModel != "nvidia/llama-3.3-nemotron-super-49b-v1" {
 		t.Errorf("Expected default FoodModel, got %s", cfg.FoodModel)
 	}
-	if cfg.ReviewModel != "z-ai/glm-5.1" {
+	if cfg.ReviewModel != "mistralai/mistral-medium-3.5-128b" {
 		t.Errorf("Expected default ReviewModel, got %s", cfg.ReviewModel)
 	}
 	if cfg.FatSecretScope != "basic" {
@@ -77,8 +77,8 @@ func TestLoadWithEnvVars(t *testing.T) {
 	// Save original env vars
 	origNVIDIA := os.Getenv("NVIDIA_API_KEY")
 	origOPENAI_BASE := os.Getenv("OPENAI_BASE_URL")
-	origOPENAI_MODEL := os.Getenv("OPENAI_MODEL")
-	origOPENAI_MODEL2 := os.Getenv("OPENAI_MODEL2")
+	origFOOD_MODEL := os.Getenv("FOOD_MODEL")
+	origREVIEW_MODEL := os.Getenv("REVIEW_MODEL")
 	origFatSecretClientID := os.Getenv("FATSECRET_CLIENT_ID")
 	origFatSecretClientSecret := os.Getenv("FATSECRET_CLIENT_SECRET")
 	origFatSecretScope := os.Getenv("FATSECRET_SCOPE")
@@ -88,8 +88,8 @@ func TestLoadWithEnvVars(t *testing.T) {
 	defer func() {
 		_ = os.Setenv("NVIDIA_API_KEY", origNVIDIA)
 		_ = os.Setenv("OPENAI_BASE_URL", origOPENAI_BASE)
-		_ = os.Setenv("OPENAI_MODEL", origOPENAI_MODEL)
-		_ = os.Setenv("OPENAI_MODEL2", origOPENAI_MODEL2)
+		_ = os.Setenv("FOOD_MODEL", origFOOD_MODEL)
+		_ = os.Setenv("REVIEW_MODEL", origREVIEW_MODEL)
 		_ = os.Setenv("FATSECRET_CLIENT_ID", origFatSecretClientID)
 		_ = os.Setenv("FATSECRET_CLIENT_SECRET", origFatSecretClientSecret)
 		_ = os.Setenv("FATSECRET_SCOPE", origFatSecretScope)
@@ -101,15 +101,15 @@ func TestLoadWithEnvVars(t *testing.T) {
 	// Clear env vars to test defaults
 	_ = os.Unsetenv("NVIDIA_API_KEY")
 	_ = os.Unsetenv("OPENAI_BASE_URL")
-	_ = os.Unsetenv("OPENAI_MODEL")
-	_ = os.Unsetenv("OPENAI_MODEL2")
+	_ = os.Unsetenv("FOOD_MODEL")
+	_ = os.Unsetenv("REVIEW_MODEL")
 	_ = os.Unsetenv("FATSECRET_CLIENT_ID")
 	_ = os.Unsetenv("FATSECRET_CLIENT_SECRET")
 	_ = os.Unsetenv("FATSECRET_SCOPE")
 	_ = os.Setenv("NVIDIA_API_KEY", "test-key-123")
 	_ = os.Setenv("OPENAI_BASE_URL", "https://custom.url/v1")
-	_ = os.Setenv("OPENAI_MODEL", "custom-model")
-	_ = os.Setenv("OPENAI_MODEL2", "custom-model-2")
+	_ = os.Setenv("FOOD_MODEL", "custom-model")
+	_ = os.Setenv("REVIEW_MODEL", "custom-model-2")
 	_ = os.Setenv("FATSECRET_CLIENT_ID", "fat-id")
 	_ = os.Setenv("FATSECRET_CLIENT_SECRET", "fat-secret")
 	_ = os.Setenv("FATSECRET_SCOPE", "basic localization")

@@ -1,8 +1,11 @@
 package services
 
 import (
+	"encoding/json"
 	"strings"
 	"sync"
+
+	"calorie-tracker/db"
 )
 
 // SynonymMapper provides bidirectional synonym mapping for food names
@@ -19,56 +22,54 @@ func NewSynonymMapper() *SynonymMapper {
 		groups:    make(map[string][]string),
 	}
 	sm.loadDefaults()
+
+	// Register with db package so migration can use it!
+	db.SynonymMapperFunc = func(s string) string {
+		return sm.GetCanonical(s)
+	}
 	return sm
 }
 
-// loadDefaults loads the built-in synonym mappings
+// loadDefaults loads the built-in synonym mappings with clean snake_case keys
 func (sm *SynonymMapper) loadDefaults() {
 	// Grains & Starches
 	sm.addGroup([]string{
-		"arroz branco", "white rice",
-		"arroz", "rice",
+		"arroz_branco", "arroz branco", "white rice", "arroz", "rice",
 	})
 	sm.addGroup([]string{
-		"arroz integral", "brown rice",
+		"arroz_integral", "arroz integral", "brown rice",
 	})
 	sm.addGroup([]string{
-		"macarrao", "pasta", "espaguete", "spaghetti",
-		"noodle", "noodles",
+		"macarrao", "pasta", "espaguete", "spaghetti", "noodle", "noodles",
 	})
 	sm.addGroup([]string{
-		"pao", "bread",
-		"pao frances", "french bread", "baguette",
+		"pao_frances", "pao frances", "pao", "bread", "french bread", "baguette",
 	})
 	sm.addGroup([]string{
-		"batata", "potato",
-		"batata frita", "french fries", "fries",
+		"pao_de_forma", "pao de forma", "sandwich bread", "sliced bread",
 	})
 	sm.addGroup([]string{
-		"batata doce", "sweet potato",
+		"batata_frita", "batata frita", "french fries", "fries", "batata", "potato",
+	})
+	sm.addGroup([]string{
+		"batata_doce", "batata doce", "sweet potato",
 	})
 
 	// Proteins
 	sm.addGroup([]string{
-		"frango", "chicken",
-		"frango grelhado", "grilled chicken",
-		"peito de frango", "chicken breast",
+		"frango_grelhado", "frango grelhado", "frango", "chicken", "grilled chicken", "peito de frango", "chicken breast",
 	})
 	sm.addGroup([]string{
-		"carne", "beef", "meat",
-		"carne bovina", "ground beef",
-		"carne moida", "minced beef",
+		"carne_moida", "carne moida", "carne", "beef", "meat", "carne bovina", "ground beef", "minced beef",
 	})
 	sm.addGroup([]string{
-		"porco", "pork",
-		"carne de porco", "pork meat",
+		"carne_de_porco", "carne de porco", "porco", "pork", "pork meat",
 	})
 	sm.addGroup([]string{
 		"peixe", "fish",
 	})
 	sm.addGroup([]string{
-		"ovo", "egg",
-		"ovos", "eggs",
+		"ovo", "ovos", "egg", "eggs",
 	})
 	sm.addGroup([]string{
 		"atum", "tuna",
@@ -90,7 +91,7 @@ func (sm *SynonymMapper) loadDefaults() {
 
 	// Fruits
 	sm.addGroup([]string{
-		"banana", "banana",
+		"banana", "bananas",
 	})
 	sm.addGroup([]string{
 		"maca", "apple",
@@ -148,7 +149,7 @@ func (sm *SynonymMapper) loadDefaults() {
 		"lentilha", "lentil", "lentils",
 	})
 	sm.addGroup([]string{
-		"grao de bico", "chickpea", "chickpeas", "garbanzo",
+		"grao_de_bico", "grao de bico", "chickpea", "chickpeas", "garbanzo",
 	})
 
 	// Fats & Oils
@@ -156,12 +157,15 @@ func (sm *SynonymMapper) loadDefaults() {
 		"azeite", "olive oil",
 	})
 	sm.addGroup([]string{
-		"oleo de coco", "coconut oil",
+		"oleo_de_coco", "oleo de coco", "coconut oil",
 	})
 
 	// Beverages
 	sm.addGroup([]string{
 		"cafe", "coffee",
+	})
+	sm.addGroup([]string{
+		"cafe_com_leite", "cafe com leite", "coffee with milk", "cafe com leite integral",
 	})
 	sm.addGroup([]string{
 		"cha", "tea",
@@ -226,6 +230,11 @@ func (sm *SynonymMapper) loadDefaults() {
 	sm.addGroup([]string{
 		"sushi", "sushi",
 	})
+
+	// Regional Brazilian inputs
+	sm.addGroup([]string{
+		"macaxeira", "cassava", "mandioca", "aipim", "macaxeira cozida", "aipim cozido", "mandioca cozida",
+	})
 }
 
 // addGroup adds a group of synonyms
@@ -235,7 +244,7 @@ func (sm *SynonymMapper) addGroup(synonyms []string) {
 	}
 
 	// Use the first synonym as the canonical form
-	canonical := sm.normalize(synonyms[0])
+	canonical := sm.normalizeCanonical(synonyms[0])
 
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -245,6 +254,12 @@ func (sm *SynonymMapper) addGroup(synonyms []string) {
 		sm.canonical[normalized] = canonical
 	}
 	sm.groups[canonical] = synonyms
+}
+
+// normalizeCanonical normalizes a string for canonical key
+func (sm *SynonymMapper) normalizeCanonical(s string) string {
+	s = strings.ReplaceAll(strings.ToLower(strings.TrimSpace(s)), " ", "_")
+	return removeAccentsBasic(s)
 }
 
 // normalize normalizes a string for lookup
@@ -268,7 +283,19 @@ func (sm *SynonymMapper) GetCanonical(name string) string {
 		return canonical
 	}
 
-	return normalized
+	// Try fuzzy matching against registered keys to handle typos (e.g. "chiken" -> "chicken")
+	keys := make([]string, 0, len(sm.canonical))
+	for k := range sm.canonical {
+		keys = append(keys, k)
+	}
+	fm := NewFuzzyMatcher(0.8)
+	bestSynonym, score := fm.FindBestMatch(normalized, keys)
+	if score >= fm.threshold && bestSynonym != "" {
+		return sm.canonical[bestSynonym]
+	}
+
+	// Dynamic lookup - replace spaces with underscores as fallback
+	return sm.normalizeCanonical(name)
 }
 
 // IsSynonym returns true if two food names are synonyms
@@ -296,10 +323,41 @@ func (sm *SynonymMapper) GetSynonyms(canonical string) []string {
 	return nil
 }
 
+// GetKeys returns all registered synonym keys
+func (sm *SynonymMapper) GetKeys() []string {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+
+	keys := make([]string, 0, len(sm.canonical))
+	for k := range sm.canonical {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // AddCustomSynonym adds a custom synonym mapping at runtime
 func (sm *SynonymMapper) AddCustomSynonym(canonical string, synonyms ...string) {
 	all := append([]string{canonical}, synonyms...)
 	sm.addGroup(all)
+}
+
+// LoadFromDatabase loads custom synonyms dynamically from the database
+func (sm *SynonymMapper) LoadFromDatabase(provider db.DBProvider) error {
+	foods, err := provider.GetAllCanonicalFoods()
+	if err != nil {
+		return err
+	}
+	for _, f := range foods {
+		var aliases []string
+		if f.AliasesJSON != "" {
+			var arr []string
+			if err := json.Unmarshal([]byte(f.AliasesJSON), &arr); err == nil {
+				aliases = arr
+			}
+		}
+		sm.AddCustomSynonym(f.CanonicalName, aliases...)
+	}
+	return nil
 }
 
 // removeAccentsBasic removes common accents from a string (simplified version)

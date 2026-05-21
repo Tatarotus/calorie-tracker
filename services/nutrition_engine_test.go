@@ -47,7 +47,7 @@ func TestNutritionEngine_EstimateGrams(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := e.estimateGrams(tt.parsed)
+			result := e.estimateGrams(tt.parsed.Name, tt.parsed.Amount, tt.parsed.Unit)
 			if result != tt.expected {
 				t.Errorf("estimateGrams() = %v, want %v", result, tt.expected)
 			}

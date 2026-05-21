@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// LLMService implements LLMProvider interface
+// LLMService implements LLMProvider interface and Validator, Parser
 type LLMService struct {
 	config *config.Config
 	client *http.Client
@@ -24,10 +24,11 @@ type ParsedFoodItemsResponse struct {
 }
 
 type ParsedFoodItem struct {
-	Name       string  `json:"name"`
-	Amount     float64 `json:"amount"`
-	Unit       string  `json:"unit"`
-	Confidence float64 `json:"confidence"`
+	Quantity     float64 `json:"quantity"`
+	Unit         string  `json:"unit"`
+	FoodName     string  `json:"food_name"`
+	CanonicalKey string  `json:"canonical_key"`
+	DisplayName  string  `json:"-"`
 }
 
 // NewLLMService creates a new LLMService with default HTTP client
@@ -39,7 +40,6 @@ func NewLLMService(cfg *config.Config) *LLMService {
 }
 
 // NewLLMServiceWithClient creates a new LLMService with a custom HTTP client
-// This is useful for testing with a mock client
 func NewLLMServiceWithClient(cfg *config.Config, client *http.Client) *LLMService {
 	return &LLMService{
 		config: cfg,
@@ -107,7 +107,8 @@ Rules:
 	return &result, nil
 }
 
-func (s *LLMService) ParseFoodItems(description string) ([]ParsedFood, error) {
+// ParseFoodItems extracts food items from a meal description without macro values.
+func (s *LLMService) ParseFoodItems(description string) ([]ParsedFoodItem, error) {
 	prompt := fmt.Sprintf(`Extract food items from this meal description.
 Description: %s
 
@@ -115,20 +116,21 @@ Return ONLY strict JSON with this exact shape:
 {
   "items": [
     {
-      "name": "normalized food name in the user's language when possible",
-      "amount": number,
+      "food_name": "name of food in lowercase (e.g., 'banana', 'cassava', 'coffee with milk')",
+      "quantity": number,
       "unit": "gram|ml|unit|cup|tablespoon|teaspoon|bowl|plate|serving|slice|handful",
-      "confidence": number
+      "canonical_key": "snake_case_canonical_key (e.g., 'banana', 'macaxeira', 'cafe_com_leite', 'leite')"
     }
   ]
 }
 
 Rules:
-1. Extract every food item, including oils, sauces, and sides.
-2. Use "unit" when the user says eggs, bananas, slices as countable items.
-3. Use amount 1 for vague singular portions like "um prato", "uma tigela", or "a bowl".
-4. Do not return calories or macros.
-5. NO prose, NO markdown blocks, only raw JSON.`, description)
+1. Extract every food item, including oils, butter, sauces, and sides.
+2. Use 'unit' for whole countable foods like eggs and bananas; use 'slice' for slices/fatias.
+3. Use quantity 1 for vague singular portions.
+4. Convert regional terms to clean canonical snake_case keys (e.g. 'macaxeira' -> 'macaxeira', 'aipim' -> 'macaxeira', 'pão francês' -> 'pao_frances', 'café com leite' -> 'cafe_com_leite').
+5. Do not return calories or macros.
+6. NO prose, NO markdown blocks, only raw JSON.`, description)
 
 	var content string
 	var err error
@@ -156,21 +158,77 @@ Rules:
 	}
 
 	parser := NewFoodParser()
-	items := make([]ParsedFood, 0, len(result.Items))
+	items := make([]ParsedFoodItem, 0, len(result.Items))
 	for _, item := range result.Items {
-		name := parser.normalizeName(item.Name)
+		name := parser.normalizeName(item.FoodName)
 		if name == "" {
 			continue
 		}
 		unit := parser.normalizeUnit(item.Unit)
-		items = append(items, ParsedFood{
-			Amount: item.Amount,
-			Unit:   unit,
-			Name:   name,
+		key := strings.ToLower(strings.TrimSpace(item.CanonicalKey))
+		if key == "" {
+			key = strings.ReplaceAll(name, " ", "_")
+		}
+		items = append(items, ParsedFoodItem{
+			Quantity:     item.Quantity,
+			Unit:         unit,
+			FoodName:     name,
+			CanonicalKey: key,
 		})
 	}
 
 	return items, nil
+}
+
+// Validate checks if the resolved food is semantically equivalent or a valid match for the original query.
+func (s *LLMService) Validate(query string, resolved *models.ReferenceFood) (bool, []string, error) {
+	prompt := fmt.Sprintf(`Compare the user's original food description with the resolved database reference food.
+Original description: "%s"
+Resolved reference food name: "%s"
+Resolved base serving: %g %s
+
+Determine if this is a dangerous or incorrect semantic mismatch (e.g. coffee with milk matched to black coffee, or cassava matched to potato, or a completely different food).
+Return ONLY strict JSON with this exact shape:
+{
+  "valid": boolean,
+  "warnings": ["string warning messages describing any discrepancies, if any"]
+}
+
+Rules:
+1. "valid" should be false only if there is a real semantic discrepancy or incorrect food category match.
+2. Moderate differences in portion/preparation can be handled with warnings but marked valid.
+3. NO prose, NO markdown blocks, only raw JSON.`, query, resolved.Name, resolved.BaseQuantity, resolved.Unit)
+
+	var content string
+	var err error
+	for i := 0; i < 3; i++ {
+		content, err = s.Call(s.config.FoodModel, prompt)
+		if err == nil && content != "" {
+			break
+		}
+		if err == nil && content == "" {
+			err = fmt.Errorf("empty response from LLM")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	if err != nil {
+		return false, nil, err
+	}
+
+	jsonStr := s.extractJSON(content)
+	jsonStr = s.sanitizeJSON(jsonStr)
+
+	type ValidateResponse struct {
+		Valid    bool     `json:"valid"`
+		Warnings []string `json:"warnings"`
+	}
+	var res ValidateResponse
+	if err := json.Unmarshal([]byte(jsonStr), &res); err != nil {
+		return false, nil, fmt.Errorf("failed to parse validation response: %w", err)
+	}
+
+	return res.Valid, res.Warnings, nil
 }
 
 // AnalyzeReview implements ReviewAnalyzer interface
