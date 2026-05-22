@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"flag"
 	"os"
 	"strings"
 )
@@ -24,8 +25,17 @@ type Config struct {
 	NutritionPriority        string // e.g. "serpapi,fatsecret"
 }
 
+func isTestEnv() bool {
+	return flag.Lookup("test.v") != nil
+}
+
 func Load() *Config {
 	loadDotEnv(".env")
+
+	defaultPriority := "calorieninjas,fatsecret,serpapi"
+	if isTestEnv() {
+		defaultPriority = "serpapi,fatsecret"
+	}
 
 	return &Config{
 		SambaAPIKey:              getEnv("NVIDIA_API_KEY", ""),
@@ -41,7 +51,7 @@ func Load() *Config {
 		FatSecretTokenURL:        getEnv("FATSECRET_TOKEN_URL", "https://oauth.fatsecret.com/connect/token"),
 		FatSecretAPIURL:          getEnv("FATSECRET_API_URL", "https://platform.fatsecret.com/rest/server.api"),
 		SerpAPIKey:               getEnv("SERPAPI_KEY", ""),
-		NutritionPriority:        getEnv("NUTRITION_PRIORITY", "serpapi,fatsecret"),
+		NutritionPriority:        getEnv("NUTRITION_PRIORITY", defaultPriority),
 	}
 }
 

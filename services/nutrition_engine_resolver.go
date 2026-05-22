@@ -3,6 +3,7 @@ package services
 import (
 	"calorie-tracker/db"
 	"calorie-tracker/models"
+	"fmt"
 )
 
 type HybridNutritionResolver struct {
@@ -33,6 +34,9 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 			return nil, trace, err
 		}
 		r.updateTraceAndCache(canonical, accepted, trace)
+		if accepted.IsStale {
+			go r.refreshCacheInBackground(canonical, item)
+		}
 		return accepted.ReferenceFood, trace, nil
 	}
 	if accepted, err := r.resolveExactReference(canonical, item); accepted != nil || err != nil {
@@ -50,25 +54,18 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 		return accepted.ReferenceFood, trace, nil
 	}
 
-	// 2. FatSecret is the first source of truth after cache.
-	fatSecretCandidate, err := r.resolveFatSecret(item)
+	// 2. Run configured primary providers concurrently (e.g. fatsecret, calorieninjas)
+	accepted, err := r.resolveActiveProviders(canonical, item, trace)
 	if err != nil {
-		trace.ValidationWarnings = append(trace.ValidationWarnings, "fatsecret lookup failed: "+err.Error())
+		return nil, trace, err
 	}
-	if fatSecretCandidate != nil {
-		ok, evalErr := r.evaluateCandidate(canonical, fatSecretCandidate)
-		if evalErr != nil {
-			return nil, trace, evalErr
-		}
-		if ok {
-			r.updateTraceAndCache(canonical, fatSecretCandidate, trace)
-			return fatSecretCandidate.ReferenceFood, trace, nil
-		}
-		trace.ValidationWarnings = append(trace.ValidationWarnings, "fatsecret response failed validation")
+	if accepted != nil {
+		r.updateTraceAndCache(canonical, accepted, trace)
+		return accepted.ReferenceFood, trace, nil
 	}
 
 	// 3. Last resort: LLM estimate, optionally cross-checked by SerpAPI/Google.
-	accepted, err := r.resolveLLMWithSerpFallback(canonical, item, trace)
+	accepted, err = r.resolveLLMWithSerpFallback(canonical, item, trace)
 	if err != nil {
 		return nil, trace, err
 	}
@@ -80,53 +77,71 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 	return nil, trace, nil
 }
 
-func (r *HybridNutritionResolver) fastBypassCheck(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*models.ReferenceFood, bool, error) {
-	override, err := r.cacheResolver.GetOverride(canonical.ID)
-	if err == nil && override != nil {
-		trace.ResolutionMethod = "user_override"
-		trace.SourceType = "user_override"
-		trace.SourceConfidence = 1.0
-		trace.ValidationTriggered = false
-
-		ref := &models.ReferenceFood{
-			Name:         canonical.NormalizedName,
-			BaseQuantity: override.ServingAmount,
-			Unit:         override.ServingUnit,
-			Macros: models.Macros{
-				Calories: override.Calories,
-				Protein:  override.Protein,
-				Carbs:    override.Carbs,
-				Fat:      override.Fat,
-			},
+func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
+	var activeProviders []NutritionProvider
+	for _, provider := range r.providers {
+		if !isSerpAPIProvider(provider) {
+			activeProviders = append(activeProviders, provider)
 		}
-		return ref, true, nil
 	}
 
-	cacheEntry, err := r.cacheResolver.Get(canonical.ID, item.Unit)
-	if err == nil && cacheEntry != nil {
-		isExpired := r.ttlPolicy.IsExpired(cacheEntry)
-		if !isExpired && cacheEntry.SourceConfidence >= 0.95 {
-			trace.ResolutionMethod = "local_cache"
-			trace.SourceType = cacheEntry.SourceType
-			trace.SourceConfidence = cacheEntry.SourceConfidence
-			trace.CacheHit = true
-			trace.ValidationTriggered = false
+	if len(activeProviders) == 0 {
+		return nil, nil
+	}
 
-			ref := &models.ReferenceFood{
-				Name:         canonical.NormalizedName,
-				BaseQuantity: cacheEntry.ServingAmount,
-				Unit:         cacheEntry.ServingUnit,
-				Macros: models.Macros{
-					Calories: cacheEntry.Calories,
-					Protein:  cacheEntry.Protein,
-					Carbs:    cacheEntry.Carbs,
-					Fat:      cacheEntry.Fat,
-				},
+	type providerResult struct {
+		provider NutritionProvider
+		ref      *models.ReferenceFood
+		err      error
+	}
+	resChan := make(chan providerResult, len(activeProviders))
+	for _, provider := range activeProviders {
+		go func(p NutritionProvider) {
+			ref, err := p.ResolveFood(parsedFoodFromItem(item))
+			resChan <- providerResult{provider: p, ref: ref, err: err}
+		}(provider)
+	}
+
+	for i := 0; i < len(activeProviders); i++ {
+		res := <-resChan
+		if res.err != nil {
+			trace.ValidationWarnings = append(trace.ValidationWarnings, "provider lookup failed: "+res.err.Error())
+			continue
+		}
+
+		if res.ref != nil {
+			sourceType := "fatsecret"
+			resolutionMethod := "fatsecret_api"
+			confidence := 1.0
+
+			if _, ok := res.provider.(*FatSecretProvider); ok {
+				sourceType = "fatsecret"
+				resolutionMethod = "fatsecret_api"
+				confidence = 1.0
+			} else if _, ok := res.provider.(*CalorieNinjasProvider); ok {
+				sourceType = "calorieninjas"
+				resolutionMethod = "calorieninjas_api"
+				confidence = 0.95
 			}
-			return ref, true, nil
+
+			candidate := &ResolutionCandidate{
+				ReferenceFood:    res.ref,
+				Confidence:       confidence,
+				SourceType:       sourceType,
+				ResolutionMethod: resolutionMethod,
+			}
+
+			ok, evalErr := r.evaluateCandidate(canonical, candidate)
+			if evalErr != nil {
+				return nil, evalErr
+			}
+			if ok {
+				return candidate, nil
+			}
+			trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%s response failed validation", sourceType))
 		}
 	}
-	return nil, false, nil
+	return nil, nil
 }
 
 func (r *HybridNutritionResolver) resolveExactReference(canonical *models.CanonicalFood, item ParsedFoodItem) (*ResolutionCandidate, error) {
@@ -210,27 +225,6 @@ func (r *HybridNutritionResolver) acceptCacheCandidate(canonical *models.Canonic
 	return candidate, nil
 }
 
-func (r *HybridNutritionResolver) resolveFatSecret(item ParsedFoodItem) (*ResolutionCandidate, error) {
-	for _, provider := range r.providers {
-		if isSerpAPIProvider(provider) {
-			continue
-		}
-		ref, err := provider.ResolveFood(parsedFoodFromItem(item))
-		if err != nil {
-			return nil, err
-		}
-		if ref != nil {
-			return &ResolutionCandidate{
-				ReferenceFood:    ref,
-				Confidence:       1.0,
-				SourceType:       "fatsecret",
-				ResolutionMethod: "fatsecret_api",
-			}, nil
-		}
-	}
-	return nil, nil
-}
-
 func (r *HybridNutritionResolver) resolveLLMWithSerpFallback(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
 	llmCandidate, err := r.resolveLLM(item)
 	if err != nil {
@@ -280,15 +274,6 @@ func (r *HybridNutritionResolver) resolveLLMWithSerpFallback(canonical *models.C
 	default:
 		return nil, nil
 	}
-}
-
-func (r *HybridNutritionResolver) hasSerpAPIProvider() bool {
-	for _, provider := range r.providers {
-		if isSerpAPIProvider(provider) {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *HybridNutritionResolver) resolveLLM(item ParsedFoodItem) (*ResolutionCandidate, error) {
@@ -405,6 +390,23 @@ func (r *HybridNutritionResolver) updateTraceAndCache(canonical *models.Canonica
 			SourceConfidence: 1.0,
 			SourceReference:  "FatSecret API: " + accepted.ReferenceFood.Name,
 			ResolutionMethod: "fatsecret_api",
+		}
+		_ = r.db.SaveNutritionCache(cacheEntry)
+		_ = r.db.CacheFood(*accepted.ReferenceFood)
+	} else if accepted.SourceType == "calorieninjas" && accepted.ResolutionMethod == "calorieninjas_api" {
+		cacheEntry := &models.NutritionCacheEntry{
+			CanonicalFoodID:  canonical.ID,
+			ServingAmount:    accepted.ReferenceFood.BaseQuantity,
+			ServingUnit:      accepted.ReferenceFood.Unit,
+			Calories:         accepted.ReferenceFood.Macros.Calories,
+			Protein:          accepted.ReferenceFood.Macros.Protein,
+			Carbs:            accepted.ReferenceFood.Macros.Carbs,
+			Fat:              accepted.ReferenceFood.Macros.Fat,
+			Fiber:            0.0,
+			SourceType:       "calorieninjas",
+			SourceConfidence: 0.95,
+			SourceReference:  "CalorieNinjas: " + accepted.ReferenceFood.Name,
+			ResolutionMethod: "calorieninjas_api",
 		}
 		_ = r.db.SaveNutritionCache(cacheEntry)
 		_ = r.db.CacheFood(*accepted.ReferenceFood)

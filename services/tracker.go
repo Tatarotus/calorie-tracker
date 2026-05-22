@@ -32,6 +32,10 @@ func NewTrackerService(db db.DBProvider, llm *LLMService) *TrackerService {
 			if serp := NewSerpAPIProvider(cfg.SerpAPIKey); serp != nil {
 				providers = append(providers, serp)
 			}
+		case "calorieninjas":
+			if cn := NewCalorieNinjasProvider(); cn != nil {
+				providers = append(providers, cn)
+			}
 		}
 	}
 
@@ -164,11 +168,15 @@ func (s *TrackerService) extractNameUnitAmount(preview *models.FoodPreview) (str
 
 	var parsedItems []ParsedFoodItem
 	var parseErr error
-	if preview.Description != "" {
+
+	// Zero-LLM Fast-Path: Bypasses the slow LLM parser when the deterministic "basic" parser was used originally.
+	useBasic := preview.ResolutionTrace != nil && preview.ResolutionTrace.ParserUsed == "basic"
+
+	if preview.Description != "" && !useBasic {
 		parsedItems, parseErr = s.engine.parser.Parse(preview.Description)
 	}
 
-	if parseErr == nil && len(parsedItems) > 0 {
+	if parseErr == nil && len(parsedItems) > 0 && !useBasic {
 		amount = parsedItems[0].Quantity
 		if name == "" {
 			name = parsedItems[0].FoodName

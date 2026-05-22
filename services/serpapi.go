@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type SerpAPIProvider struct {
@@ -22,7 +21,7 @@ func NewSerpAPIProvider(apiKey string) *SerpAPIProvider {
 		return nil
 	}
 	return &SerpAPIProvider{
-		client: &http.Client{Timeout: 15 * time.Second},
+		client: SharedHTTPClient,
 		apiKey: apiKey,
 	}
 }

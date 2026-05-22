@@ -134,3 +134,104 @@ func isMassOrVolumeUnit(unit string) bool {
 		return false
 	}
 }
+
+func (r *HybridNutritionResolver) fastBypassCheck(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*models.ReferenceFood, bool, error) {
+	override, err := r.cacheResolver.GetOverride(canonical.ID)
+	if err == nil && override != nil {
+		trace.ResolutionMethod = "user_override"
+		trace.SourceType = "user_override"
+		trace.SourceConfidence = 1.0
+		trace.ValidationTriggered = false
+
+		ref := &models.ReferenceFood{
+			Name:         canonical.NormalizedName,
+			BaseQuantity: override.ServingAmount,
+			Unit:         override.ServingUnit,
+			Macros: models.Macros{
+				Calories: override.Calories,
+				Protein:  override.Protein,
+				Carbs:    override.Carbs,
+				Fat:      override.Fat,
+			},
+		}
+		return ref, true, nil
+	}
+
+	cacheEntry, err := r.cacheResolver.Get(canonical.ID, item.Unit)
+	if err == nil && cacheEntry != nil {
+		isExpired := r.ttlPolicy.IsExpired(cacheEntry)
+		if !isExpired && cacheEntry.SourceConfidence >= 0.95 {
+			trace.ResolutionMethod = "local_cache"
+			trace.SourceType = cacheEntry.SourceType
+			trace.SourceConfidence = cacheEntry.SourceConfidence
+			trace.CacheHit = true
+			trace.ValidationTriggered = false
+
+			ref := &models.ReferenceFood{
+				Name:         canonical.NormalizedName,
+				BaseQuantity: cacheEntry.ServingAmount,
+				Unit:         cacheEntry.ServingUnit,
+				Macros: models.Macros{
+					Calories: cacheEntry.Calories,
+					Protein:  cacheEntry.Protein,
+					Carbs:    cacheEntry.Carbs,
+					Fat:      cacheEntry.Fat,
+				},
+			}
+			return ref, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
+func (r *HybridNutritionResolver) hasSerpAPIProvider() bool {
+	for _, provider := range r.providers {
+		if isSerpAPIProvider(provider) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *HybridNutritionResolver) refreshCacheInBackground(canonical *models.CanonicalFood, item ParsedFoodItem) {
+	for _, provider := range r.providers {
+		if isSerpAPIProvider(provider) {
+			continue
+		}
+		ref, err := provider.ResolveFood(parsedFoodFromItem(item))
+		if err != nil {
+			continue
+		}
+		if ref == nil {
+			continue
+		}
+
+		sourceType := "fatsecret"
+		resolutionMethod := "fatsecret_api"
+		confidence := 1.0
+
+		if _, ok := provider.(*FatSecretProvider); ok {
+			sourceType = "fatsecret"
+			resolutionMethod = "fatsecret_api"
+			confidence = 1.0
+		} else if _, ok := provider.(*CalorieNinjasProvider); ok {
+			sourceType = "calorieninjas"
+			resolutionMethod = "calorieninjas_api"
+			confidence = 0.95
+		}
+
+		candidate := &ResolutionCandidate{
+			ReferenceFood:    ref,
+			Confidence:       confidence,
+			SourceType:       sourceType,
+			ResolutionMethod: resolutionMethod,
+		}
+
+		ok, evalErr := r.evaluateCandidate(canonical, candidate)
+		if evalErr == nil && ok {
+			// Update the cache silently
+			r.updateTraceAndCache(canonical, candidate, &models.ResolutionTrace{})
+			break
+		}
+	}
+}

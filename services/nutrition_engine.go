@@ -86,20 +86,50 @@ func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, erro
 	// Stage 1: Linguistic parsing (using already-normalized input)
 	var items []ParsedFoodItem
 	var err error
+	parserUsed := "llm"
 
-	if e.parser != nil {
-		items, err = e.parser.Parse(normalizedDesc)
-	}
-
+	// Run fast basic heuristic parser first to check for zero-LLM fast path
 	basicItems := parsedItemsFromBasicParser(e, normalizedDesc)
-	if shouldPreferBasicParsedItems(basicItems, items) {
-		items = basicItems
-		err = nil
+	allCached := len(basicItems) > 0
+	for _, item := range basicItems {
+		canonical, cErr := e.canonicalResolver.Resolve(item.FoodName)
+		if cErr != nil || canonical == nil {
+			allCached = false
+			break
+		}
+
+		isCached := false
+		if override, oErr := e.cacheResolver.GetOverride(canonical.ID); oErr == nil && override != nil {
+			isCached = true
+		} else if cacheEntry, ccErr := e.cacheResolver.Get(canonical.ID, item.Unit); ccErr == nil && cacheEntry != nil {
+			isCached = true
+		}
+
+		if !isCached {
+			allCached = false
+			break
+		}
 	}
 
-	// Fallback to basic regex parsing if LLM is unavailable or failed
-	if err != nil || len(items) == 0 {
+	if allCached {
 		items = basicItems
+		parserUsed = "basic"
+	} else {
+		if e.parser != nil {
+			items, err = e.parser.Parse(normalizedDesc)
+		}
+
+		if shouldPreferBasicParsedItems(basicItems, items) {
+			items = basicItems
+			err = nil
+			parserUsed = "basic"
+		}
+
+		// Fallback to basic regex parsing if LLM is unavailable or failed
+		if err != nil || len(items) == 0 {
+			items = basicItems
+			parserUsed = "basic"
+		}
 	}
 	e.applyDisplayNames(description, items)
 
@@ -120,6 +150,10 @@ func (e *NutritionEngine) Analyze(description string) (*models.FoodPreview, erro
 		itemPreview, err := e.analyzeItem(canonical, item)
 		if err != nil {
 			return nil, err
+		}
+
+		if itemPreview.ResolutionTrace != nil {
+			itemPreview.ResolutionTrace.ParserUsed = parserUsed
 		}
 
 		descriptions = append(descriptions, itemPreview.Description)

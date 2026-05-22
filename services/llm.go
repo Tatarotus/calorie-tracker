@@ -35,7 +35,7 @@ type ParsedFoodItem struct {
 func NewLLMService(cfg *config.Config) *LLMService {
 	return &LLMService{
 		config: cfg,
-		client: &http.Client{Timeout: 30 * time.Second},
+		client: SharedHTTPClient,
 	}
 }
 
@@ -270,6 +270,7 @@ func (s *LLMService) callLLM(model, prompt string) (string, error) {
 		Messages: []chatMessage{
 			{Role: "user", Content: prompt},
 		},
+		MaxTokens: 1024,
 	})
 
 	url := s.config.OpenAIBaseURL
@@ -426,8 +427,9 @@ type chatMessage struct {
 
 // chatRequest represents the request to the chat API
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
+	Model     string        `json:"model"`
+	Messages  []chatMessage `json:"messages"`
+	MaxTokens int           `json:"max_tokens,omitempty"`
 }
 
 // chatResponse represents the response from the chat API

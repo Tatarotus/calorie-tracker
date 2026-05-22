@@ -258,3 +258,222 @@ func TestTrackerService_SaveFood_LineageAndOverride(t *testing.T) {
 		t.Errorf("expected override calories scaled to base unit to be 89, got %f", override.Calories)
 	}
 }
+
+type mockSpyParser struct {
+	called bool
+}
+
+func (m *mockSpyParser) Parse(desc string) ([]ParsedFoodItem, error) {
+	m.called = true
+	return nil, nil
+}
+
+func TestNutritionEngine_ZeroLLM_CacheFastPath(t *testing.T) {
+	mockDB := db.NewMockDB()
+
+	// Seed canonical food
+	cf := &models.CanonicalFood{
+		ID:             1,
+		CanonicalName:  "batata_frita",
+		NormalizedName: "batata frita",
+		Language:       "pt",
+		Category:       "food",
+	}
+	_ = mockDB.SaveCanonicalFood(cf)
+
+	// Seed cache entry
+	cacheEntry := &models.NutritionCacheEntry{
+		CanonicalFoodID:  1,
+		ServingAmount:    100.0,
+		ServingUnit:      "g",
+		Calories:         312,
+		Protein:          3.4,
+		Carbs:            41.4,
+		Fat:              15.0,
+		SourceConfidence: 0.95,
+		SourceType:       "fatsecret",
+		UpdatedAt:        time.Now(),
+	}
+	_ = mockDB.SaveNutritionCache(cacheEntry)
+
+	engine := NewNutritionEngine(mockDB, nil)
+	spyParser := &mockSpyParser{}
+	engine.parser = spyParser
+
+	preview, err := engine.Analyze("100g batata frita")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if preview == nil {
+		t.Fatal("expected non-nil preview")
+	}
+
+	if spyParser.called {
+		t.Error("expected LLM parser to be completely bypassed, but Parse was called")
+	}
+
+	if preview.Calories != 312 {
+		t.Errorf("expected 312 calories, got %f", preview.Calories)
+	}
+}
+
+type mockProvider struct {
+	delay time.Duration
+	ref   *models.ReferenceFood
+}
+
+func (m *mockProvider) ResolveFood(item ParsedFood) (*models.ReferenceFood, error) {
+	if m.delay > 0 {
+		time.Sleep(m.delay)
+	}
+	return m.ref, nil
+}
+
+func TestHybridNutritionResolver_StaleWhileRevalidate(t *testing.T) {
+	mockDB := db.NewMockDB()
+
+	// Seed canonical food
+	cf := &models.CanonicalFood{
+		ID:             1,
+		CanonicalName:  "batata_frita",
+		NormalizedName: "batata frita",
+		Language:       "pt",
+		Category:       "food",
+	}
+	_ = mockDB.SaveCanonicalFood(cf)
+
+	// Seed stale cache entry (Calories = 300)
+	cacheEntry := &models.NutritionCacheEntry{
+		CanonicalFoodID:  1,
+		ServingAmount:    100.0,
+		ServingUnit:      "g",
+		Calories:         300,
+		Protein:          3.0,
+		Carbs:            40.0,
+		Fat:              10.0,
+		SourceConfidence: 0.95,
+		SourceType:       "fatsecret",
+		UpdatedAt:        time.Now().Add(-20 * 24 * time.Hour), // Expired
+	}
+	_ = mockDB.SaveNutritionCache(cacheEntry)
+
+	// Setup mock provider with fresh results (Calories = 350)
+	freshRef := &models.ReferenceFood{
+		Name:         "batata frita",
+		BaseQuantity: 100.0,
+		Unit:         "g",
+		Macros: models.Macros{
+			Calories: 350,
+			Protein:  4.0,
+			Carbs:    45.0,
+			Fat:      12.0,
+		},
+	}
+	prov := &mockProvider{ref: freshRef}
+
+	engine := NewNutritionEngineWithProviders(mockDB, nil, []NutritionProvider{prov})
+
+	preview, err := engine.Analyze("100g batata frita")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if preview == nil {
+		t.Fatal("expected non-nil preview")
+	}
+
+	// Verify that the stale entry macros are returned immediately
+	if preview.Calories != 300 {
+		t.Errorf("expected immediate stale calories of 300, got %f", preview.Calories)
+	} // Wait for background goroutine to execute (up to 1 second)
+	var updatedCache *models.NutritionCacheEntry
+	for i := 0; i < 50; i++ {
+		updatedCache, err = mockDB.GetNutritionCache(1, "g")
+		if err == nil && updatedCache != nil && updatedCache.Calories == 350 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if updatedCache == nil {
+		t.Fatal("expected updated cache to be non-nil")
+	}
+
+	if updatedCache.Calories != 350 {
+		t.Errorf("expected updated cache calories to be 350, got %f", updatedCache.Calories)
+	}
+}
+
+func TestHybridNutritionResolver_ParallelFanOut(t *testing.T) {
+	mockDB := db.NewMockDB()
+
+	// Seed canonical food
+	cf := &models.CanonicalFood{
+		ID:             1,
+		CanonicalName:  "batata_frita",
+		NormalizedName: "batata frita",
+		Language:       "pt",
+		Category:       "food",
+	}
+	_ = mockDB.SaveCanonicalFood(cf)
+
+	// Setup two mock providers
+	// Fast provider resolves immediately
+	fastRef := &models.ReferenceFood{
+		Name:         "batata frita",
+		BaseQuantity: 100.0,
+		Unit:         "g",
+		Macros: models.Macros{
+			Calories: 320,
+			Protein:  3.5,
+			Carbs:    42.0,
+			Fat:      14.0,
+		},
+	}
+	fastProv := &mockProvider{
+		delay: 0,
+		ref:   fastRef,
+	}
+
+	// Slow provider takes a while to resolve
+	slowRef := &models.ReferenceFood{
+		Name:         "batata frita",
+		BaseQuantity: 100.0,
+		Unit:         "g",
+		Macros: models.Macros{
+			Calories: 360,
+			Protein:  4.0,
+			Carbs:    46.0,
+			Fat:      16.0,
+		},
+	}
+	slowProv := &mockProvider{
+		delay: 500 * time.Millisecond,
+		ref:   slowRef,
+	}
+
+	engine := NewNutritionEngineWithProviders(mockDB, nil, []NutritionProvider{slowProv, fastProv})
+
+	start := time.Now()
+	preview, err := engine.Analyze("100g batata frita")
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if preview == nil {
+		t.Fatal("expected non-nil preview")
+	}
+
+	// Should complete much faster than the 500ms slow provider delay
+	if duration >= 400*time.Millisecond {
+		t.Errorf("expected parallel racing to complete under 400ms, took %v", duration)
+	}
+
+	// Should select the fast provider's result (Calories = 320)
+	if preview.Calories != 320 {
+		t.Errorf("expected fast provider calories of 320, got %f", preview.Calories)
+	}
+}
