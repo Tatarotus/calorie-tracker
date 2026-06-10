@@ -96,11 +96,12 @@ func AnalyzeNativeReview(data models.ReviewData) *models.ReviewResult {
 		issues = append(issues, fmt.Sprintf("Zero intake recorded on %d out of 7 days", 7-activeDays))
 	}
 
-	if goalType == "weight_gain" {
+	switch goalType {
+	case "weight_gain":
 		if avgCaloriesActive < targetKcal-150 {
 			issues = append(issues, fmt.Sprintf("Caloric intake on active days is %.0f%% of requirement (avg %.0f vs %.0f kcal target)", (avgCaloriesActive/targetKcal)*100.0, avgCaloriesActive, targetKcal))
 		}
-	} else if goalType == "weight_loss" {
+	case "weight_loss":
 		if avgCaloriesActive > targetKcal+150 {
 			issues = append(issues, fmt.Sprintf("Caloric intake on active days is above deficit target (avg %.0f vs %.0f kcal target)", avgCaloriesActive, targetKcal))
 		}
@@ -169,10 +170,11 @@ func AnalyzeNativeReview(data models.ReviewData) *models.ReviewResult {
 	if activeDays < 7 {
 		suggestions = append(suggestions, "Establish a daily habit of logging every meal to avoid missing logs")
 	}
-	if goalType == "weight_gain" {
+	switch goalType {
+	case "weight_gain":
 		suggestions = append(suggestions, fmt.Sprintf("Increase daily calories to target surplus (~%.0f kcal) by adding healthy calorie-dense foods like peanut butter, avocados, and nuts", targetKcal))
 		suggestions = append(suggestions, fmt.Sprintf("Prioritize protein to reach your %.1fg daily target to support muscle gain (currently %.1fg)", targetProtein, avgProteinActive))
-	} else if goalType == "weight_loss" {
+	case "weight_loss":
 		suggestions = append(suggestions, fmt.Sprintf("Ensure you maintain a consistent caloric deficit (target ~%.0f kcal) while keeping protein high", targetKcal))
 	}
 	if avgWaterActive < 2500 {

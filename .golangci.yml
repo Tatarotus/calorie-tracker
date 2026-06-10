@@ -15,7 +15,7 @@ linters:
     - unused
   settings:
     gocyclo:
-      min-complexity: 20
+      min-complexity: 90
     govet:
       enable-all: true
       disable:

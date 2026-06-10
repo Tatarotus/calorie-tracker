@@ -73,9 +73,7 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 	// 3. Last resort: LLM estimate
 	llmCandidate, err := r.resolveLLM(item)
 	if err != nil {
-		if trace != nil {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm fallback failed: "+err.Error())
-		}
+		trace.ValidationWarnings = append(trace.ValidationWarnings, "llm fallback failed: "+err.Error())
 	}
 	if llmCandidate != nil {
 		ok, err := r.evaluateCandidate(canonical, llmCandidate)
@@ -131,9 +129,7 @@ func (r *HybridNutritionResolver) resolveActiveProvidersAndCompare(canonical *mo
 	for i := 0; i < len(activeProviders); i++ {
 		res := <-resChan
 		if res.err != nil {
-			if trace != nil {
-				trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%T lookup failed: %v", res.provider, res.err))
-			}
+			trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%T lookup failed: %v", res.provider, res.err))
 			continue
 		}
 
@@ -170,9 +166,7 @@ func (r *HybridNutritionResolver) resolveActiveProvidersAndCompare(canonical *mo
 			if ok {
 				validCandidates = append(validCandidates, candidate)
 			} else {
-				if trace != nil {
-					trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%s response failed validation", sourceType))
-				}
+				trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%s response failed validation", sourceType))
 			}
 		}
 	}
@@ -266,70 +260,6 @@ func (r *HybridNutritionResolver) acceptCacheCandidate(canonical *models.Canonic
 	return candidate, nil
 }
 
-func (r *HybridNutritionResolver) resolveLLMWithSerpFallback(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
-	var llmCandidate *ResolutionCandidate
-	var serpCandidate *ResolutionCandidate
-	var err error
-
-	llmCandidate, err = r.resolveLLM(item)
-	if err != nil {
-		if trace != nil {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm fallback failed: "+err.Error())
-		}
-	}
-
-	if r.ProgressCallback != nil {
-		r.ProgressCallback("serp")
-	}
-
-	serpCandidate, err = r.resolveSerpAPI(item)
-	if err != nil {
-		if trace != nil {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "serpapi fallback failed: "+err.Error())
-		}
-	}
-
-	switch {
-	case llmCandidate != nil && serpCandidate != nil:
-		if macrosConsistent(llmCandidate.ReferenceFood, serpCandidate.ReferenceFood) {
-			llmCandidate.Confidence = 0.75
-			ok, err := r.evaluateCandidate(canonical, llmCandidate)
-			if err != nil || !ok {
-				return nil, err
-			}
-			trace.SerpAPIFallback = true
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm estimate cross-checked by serpapi")
-			return llmCandidate, nil
-		}
-		trace.ValidationWarnings = append(trace.ValidationWarnings, "llm and serpapi disagreed; rejecting uncorroborated estimates")
-		return nil, nil
-	case serpCandidate != nil:
-		if !hasUsefulMacroProfile(serpCandidate.ReferenceFood) {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "serpapi response rejected because macro profile was incomplete")
-			return nil, nil
-		}
-		ok, err := r.evaluateCandidate(canonical, serpCandidate)
-		if err != nil || !ok {
-			return nil, err
-		}
-		return serpCandidate, nil
-	case llmCandidate != nil:
-		if r.hasSerpAPIProvider() {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm estimate rejected because serpapi did not corroborate it")
-			return nil, nil
-		}
-		llmCandidate.Confidence = 0.60
-		ok, err := r.evaluateCandidate(canonical, llmCandidate)
-		if err != nil || !ok {
-			return nil, err
-		}
-		trace.ValidationWarnings = append(trace.ValidationWarnings, "llm estimate used without provider corroboration")
-		return llmCandidate, nil
-	default:
-		return nil, nil
-	}
-}
-
 func (r *HybridNutritionResolver) resolveLLM(item ParsedFoodItem) (*ResolutionCandidate, error) {
 	if r.llm == nil {
 		return nil, nil
@@ -344,27 +274,6 @@ func (r *HybridNutritionResolver) resolveLLM(item ParsedFoodItem) (*ResolutionCa
 		SourceType:       "llm",
 		ResolutionMethod: "llm_fallback",
 	}, nil
-}
-
-func (r *HybridNutritionResolver) resolveSerpAPI(item ParsedFoodItem) (*ResolutionCandidate, error) {
-	for _, provider := range r.providers {
-		if !isSerpAPIProvider(provider) {
-			continue
-		}
-		ref, err := provider.ResolveFood(parsedFoodFromItem(item))
-		if err != nil {
-			return nil, err
-		}
-		if ref != nil {
-			return &ResolutionCandidate{
-				ReferenceFood:    ref,
-				Confidence:       0.50,
-				SourceType:       "serpapi_fallback",
-				ResolutionMethod: "serpapi_fallback",
-			}, nil
-		}
-	}
-	return nil, nil
 }
 
 func (r *HybridNutritionResolver) evaluateCandidate(canonical *models.CanonicalFood, candidate *ResolutionCandidate) (bool, error) {
@@ -523,12 +432,12 @@ func (r *HybridNutritionResolver) evaluateBestCandidate(candidates []*Resolution
 				continue
 			}
 			m2 := getNormalizedMacros(c2.ReferenceFood)
-			
+
 			calDiff := abs(m1.Calories - m2.Calories)
 			proDiff := abs(m1.Protein - m2.Protein)
 			carbDiff := abs(m1.Carbs - m2.Carbs)
 			fatDiff := abs(m1.Fat - m2.Fat)
-			
+
 			diffSum += calDiff + 4.0*(proDiff+carbDiff+fatDiff)
 		}
 		scores[i] = candidateScore{

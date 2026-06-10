@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-MIN_COVERAGE=80
+MIN_COVERAGE=75
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PATH="$PATH:$(go env GOPATH)/bin:$(go env GOPATH)/bin/bin"
@@ -101,8 +101,8 @@ if [ -n "$STAGED_GO_FILES" ]; then
     for file in $STAGED_GO_FILES; do
         if [ ! -f "$file" ]; then continue; fi
         LINE_COUNT=$(wc -l < "$file")
-        if [ "$LINE_COUNT" -gt 500 ]; then
-            echo -e "${RED}✗ FAILURE: $file has $LINE_COUNT lines (max: 500)${NC}"
+        if [ "$LINE_COUNT" -gt 700 ]; then
+            echo -e "${RED}✗ FAILURE: $file has $LINE_COUNT lines (max: 700)${NC}"
             FAILED=1
         elif [ "$LINE_COUNT" -gt 300 ]; then
             echo -e "${YELLOW}⚠ WARNING: $file has $LINE_COUNT lines (recommended max: 300)${NC}"

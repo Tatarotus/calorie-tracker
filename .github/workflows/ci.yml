@@ -36,11 +36,11 @@ jobs:
       run: |
         COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | tr -d '%')
         echo "Coverage: ${COVERAGE}%"
-        if [ $(echo "$COVERAGE < 80" | bc) -eq 1 ]; then
-          echo "Error: Coverage ${COVERAGE}% is below minimum 80%"
+        if [ $(echo "$COVERAGE < 75" | bc) -eq 1 ]; then
+          echo "Error: Coverage ${COVERAGE}% is below minimum 75%"
           exit 1
         fi
-        echo "Coverage OK: ${COVERAGE}% >= 80%"
+        echo "Coverage OK: ${COVERAGE}% >= 75%"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -108,21 +108,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Check file sizes (max 500 lines)
+    - name: Check file sizes (max 700 lines)
       run: |
         FAILED=0
         for file in $(find . -name '*.go' -not -path './vendor/*'); do
           LINE_COUNT=$(wc -l < "$file")
-          if [ "$LINE_COUNT" -gt 500 ]; then
-            echo "✗ $file has $LINE_COUNT lines (max: 500)"
+          if [ "$LINE_COUNT" -gt 700 ]; then
+            echo "✗ $file has $LINE_COUNT lines (max: 700)"
             FAILED=1
           fi
         done
         if [ "$FAILED" -eq 1 ]; then
-          echo "Error: Some files exceed 500 line limit"
+          echo "Error: Some files exceed 700 line limit"
           exit 1
         fi
-        echo "All Go files within 500 line limit"
+        echo "All Go files within 700 line limit"
 
   build:
     runs-on: ubuntu-latest

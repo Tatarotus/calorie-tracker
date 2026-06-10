@@ -387,26 +387,6 @@ func (s *LLMService) sanitizeJSON(jsonStr string) string {
 	return result
 }
 
-// extractJSON extracts JSON from content that may contain markdown or other text
-func (s *LLMService) extractJSON(content string) string {
-	// First, try to find a markdown block
-	if start := strings.Index(content, "```json"); start != -1 {
-		rest := content[start+7:]
-		if end := strings.Index(rest, "```"); end != -1 {
-			return strings.TrimSpace(rest[:end])
-		}
-	}
-
-	// Fallback to first '{' and last '}'
-	start := strings.Index(content, "{")
-	end := strings.LastIndex(content, "}")
-	if start == -1 || end == -1 || end < start {
-		return content
-	}
-
-	return content[start : end+1]
-}
-
 // chatMessage represents a message in the chat request
 type chatMessage struct {
 	Role    string `json:"role"`
@@ -450,7 +430,7 @@ func (s *LLMService) parseLLMResponse(content string, dest interface{}) error {
 			break
 		}
 		start += startIdx
-		
+
 		depth := 0
 		end := -1
 		for i := start; i < len(content); i++ {
@@ -464,7 +444,7 @@ func (s *LLMService) parseLLMResponse(content string, dest interface{}) error {
 				}
 			}
 		}
-		
+
 		if end != -1 {
 			candidates = append(candidates, content[start:end+1])
 			startIdx = start + 1
@@ -481,7 +461,7 @@ func (s *LLMService) parseLLMResponse(content string, dest interface{}) error {
 	for _, cand := range candidates {
 		cand = s.sanitizeJSON(cand)
 		cand = s.cleanJSON(cand)
-		
+
 		if err := json.Unmarshal([]byte(cand), dest); err == nil {
 			return nil
 		} else {

@@ -3,7 +3,6 @@ package services
 import (
 	"calorie-tracker/models"
 	"fmt"
-	"math"
 	"strings"
 )
 
@@ -18,59 +17,6 @@ func parsedFoodFromItem(item ParsedFoodItem) ParsedFood {
 func isSerpAPIProvider(provider NutritionProvider) bool {
 	_, ok := provider.(*SerpAPIProvider)
 	return ok
-}
-
-func macrosConsistent(a, b *models.ReferenceFood) bool {
-	if a == nil || b == nil {
-		return false
-	}
-	aPer100, okA := macrosPer100(a)
-	bPer100, okB := macrosPer100(b)
-	if !okA || !okB {
-		return false
-	}
-	return closeEnough(aPer100.Calories, bPer100.Calories, 0.25) &&
-		closeEnough(aPer100.Protein, bPer100.Protein, 0.35) &&
-		closeEnough(aPer100.Carbs, bPer100.Carbs, 0.35) &&
-		closeEnough(aPer100.Fat, bPer100.Fat, 0.35)
-}
-
-func hasUsefulMacroProfile(ref *models.ReferenceFood) bool {
-	if ref == nil || ref.Macros.Calories <= 0 {
-		return false
-	}
-	nonZeroMacros := 0
-	if ref.Macros.Protein > 0 {
-		nonZeroMacros++
-	}
-	if ref.Macros.Carbs > 0 {
-		nonZeroMacros++
-	}
-	if ref.Macros.Fat > 0 {
-		nonZeroMacros++
-	}
-	return nonZeroMacros >= 2
-}
-
-func macrosPer100(ref *models.ReferenceFood) (models.Macros, bool) {
-	if ref.BaseQuantity <= 0 {
-		return models.Macros{}, false
-	}
-	factor := 100.0 / ref.BaseQuantity
-	return models.Macros{
-		Calories: ref.Macros.Calories * factor,
-		Protein:  ref.Macros.Protein * factor,
-		Carbs:    ref.Macros.Carbs * factor,
-		Fat:      ref.Macros.Fat * factor,
-	}, true
-}
-
-func closeEnough(a, b, tolerance float64) bool {
-	maxVal := math.Max(math.Abs(a), math.Abs(b))
-	if maxVal == 0 {
-		return true
-	}
-	return math.Abs(a-b)/maxVal <= tolerance
 }
 
 func hasPreparationMismatch(query, resolved string) bool {
@@ -182,15 +128,6 @@ func (r *HybridNutritionResolver) fastBypassCheck(canonical *models.CanonicalFoo
 		}
 	}
 	return nil, false, nil
-}
-
-func (r *HybridNutritionResolver) hasSerpAPIProvider() bool {
-	for _, provider := range r.providers {
-		if isSerpAPIProvider(provider) {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *HybridNutritionResolver) refreshCacheInBackground(canonical *models.CanonicalFood, item ParsedFoodItem) {

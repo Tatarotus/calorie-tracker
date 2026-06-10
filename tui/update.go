@@ -53,9 +53,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i, t := range m.Tasks {
 			if t.ID == msg.TaskID {
 				m.Tasks[i].Status = msg.Stage
-				if msg.Stage == "completed" {
+				switch msg.Stage {
+				case "completed":
 					m.Tasks[i].Result = msg.Result
-				} else if msg.Stage == "failed" {
+				case "failed":
 					m.Tasks[i].Error = msg.Err
 				}
 				break

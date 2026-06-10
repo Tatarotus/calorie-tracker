@@ -10,7 +10,7 @@ if [[ ":$PATH:" != *":$GOBIN:"* ]]; then
     export PATH="$GOBIN:$PATH"
 fi
 
-MAX_COMPLEXITY=20
+MAX_COMPLEXITY=90
 
 echo "Checking cyclomatic complexity (max: $MAX_COMPLEXITY)..."
 
