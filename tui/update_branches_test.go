@@ -70,8 +70,8 @@ func TestUpdate_HandleKeyMsg_ConfirmFood(t *testing.T) {
 	model, _ := m.Update(msg)
 	m2 := model.(Model)
 
-	if m2.Mode != DashboardView {
-		t.Errorf("Expected DashboardView, got %v", m2.Mode)
+	if m2.Mode != AddFoodView {
+		t.Errorf("Expected AddFoodView, got %v", m2.Mode)
 	}
 }
 

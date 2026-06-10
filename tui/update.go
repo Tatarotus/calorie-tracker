@@ -4,6 +4,7 @@ import (
 	"calorie-tracker/models"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,7 +27,7 @@ type (
 )
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(m.getStatsCmd(), m.getGoalCmd())
+	return tea.Batch(m.getStatsCmd(), m.getGoalCmd(), m.listenForProgressCmd())
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -48,8 +49,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Loading = false
 		m.PendingFood = (*models.FoodPreview)(msg)
 		m.Mode = ConfirmFoodView
+	case ProgressMsg:
+		for i, t := range m.Tasks {
+			if t.ID == msg.TaskID {
+				m.Tasks[i].Status = msg.Stage
+				if msg.Stage == "completed" {
+					m.Tasks[i].Result = msg.Result
+				} else if msg.Stage == "failed" {
+					m.Tasks[i].Error = msg.Err
+				}
+				break
+			}
+		}
+		return m, m.listenForProgressCmd()
 	case FoodSavedMsg:
 		m.Loading = false
+		if len(m.Tasks) > 0 && m.ActiveTaskIndex < len(m.Tasks) {
+			m.Tasks = append(m.Tasks[:m.ActiveTaskIndex], m.Tasks[m.ActiveTaskIndex+1:]...)
+			if m.ActiveTaskIndex >= len(m.Tasks) {
+				m.ActiveTaskIndex = len(m.Tasks) - 1
+			}
+			if m.ActiveTaskIndex < 0 {
+				m.ActiveTaskIndex = 0
+			}
+		}
+		hasMore := false
+		for _, t := range m.Tasks {
+			if t.Status == "completed" {
+				hasMore = true
+				break
+			}
+		}
+		if hasMore {
+			m.Mode = AddFoodView
+			m.FocusTaskList = true
+			m.FoodInput.Blur()
+			return m, m.getStatsCmd()
+		}
 		m.Mode = DashboardView
 		return m, m.getStatsCmd()
 	case UndoMsg:
@@ -146,6 +182,12 @@ func (m Model) handleLogViewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.Mode = MonthLogView
 		m.Loading = true
 		return m, m.getMonthLogCmd()
+	case "j":
+		m.Viewport.LineDown(1)
+		return m, nil
+	case "k":
+		m.Viewport.LineUp(1)
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -154,12 +196,67 @@ func (m Model) handleLogViewKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleInputModeKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
+	if m.Mode == AddFoodView && m.FocusTaskList {
+		switch msg.String() {
+		case "tab":
+			m.FocusTaskList = false
+			m.FoodInput.Focus()
+			return m, nil
+		case "j", "down":
+			if len(m.Tasks) > 0 {
+				m.ActiveTaskIndex = (m.ActiveTaskIndex + 1) % len(m.Tasks)
+			}
+			return m, nil
+		case "k", "up":
+			if len(m.Tasks) > 0 {
+				m.ActiveTaskIndex = (m.ActiveTaskIndex - 1 + len(m.Tasks)) % len(m.Tasks)
+			}
+			return m, nil
+		case "d", "backspace":
+			if len(m.Tasks) > 0 {
+				m.Tasks = append(m.Tasks[:m.ActiveTaskIndex], m.Tasks[m.ActiveTaskIndex+1:]...)
+				if m.ActiveTaskIndex >= len(m.Tasks) {
+					m.ActiveTaskIndex = len(m.Tasks) - 1
+				}
+				if m.ActiveTaskIndex < 0 {
+					m.ActiveTaskIndex = 0
+				}
+				if len(m.Tasks) == 0 {
+					m.FocusTaskList = false
+					m.FoodInput.Focus()
+				}
+			}
+			return m, nil
+		case "enter", "space":
+			if len(m.Tasks) > 0 && m.ActiveTaskIndex < len(m.Tasks) {
+				t := m.Tasks[m.ActiveTaskIndex]
+				if t.Status == "completed" {
+					m.PendingFood = t.Result
+					m.Mode = ConfirmFoodView
+				}
+			}
+			return m, nil
+		case "esc":
+			m.Mode = DashboardView
+			return m, m.getStatsCmd()
+		case "ctrl+c":
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
 	case "esc":
 		m.Mode = DashboardView
 		return m, m.getStatsCmd()
+	case "tab":
+		if m.Mode == AddFoodView && len(m.Tasks) > 0 {
+			m.FocusTaskList = true
+			m.FoodInput.Blur()
+		}
+		return m, nil
 	case "ctrl+m":
 		if m.Mode == AddFoodView {
 			m.PendingFood = &models.FoodPreview{
@@ -182,9 +279,22 @@ func (m Model) handleInputModeKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 func (m Model) handleInputModeEnter() (Model, tea.Cmd) {
 	switch m.Mode {
 	case AddFoodView:
-		m.Loading = true
-		m.Error = nil
-		return m, m.parseFoodCmd(m.FoodInput.Value())
+		desc := m.FoodInput.Value()
+		if strings.TrimSpace(desc) == "" {
+			return m, nil
+		}
+		m.FoodInput.SetValue("")
+		taskID := m.NextTaskID
+		m.NextTaskID++
+
+		task := ParseTask{
+			ID:          taskID,
+			Description: desc,
+			Status:      "pending",
+		}
+		m.Tasks = append(m.Tasks, task)
+
+		return m, m.parseFoodWithProgressCmd(taskID, desc)
 	case AddWaterView:
 		m.Loading = true
 		m.Error = nil
@@ -198,14 +308,66 @@ func (m Model) handleInputModeEnter() (Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) parseFoodWithProgressCmd(taskID int, desc string) tea.Cmd {
+	return func() tea.Msg {
+		localTracker := m.Tracker.Clone()
+		localTracker.SetProgressCallback(func(stage string) {
+			m.ProgressChan <- ProgressMsg{
+				TaskID: taskID,
+				Stage:  stage,
+			}
+		})
+
+		preview, err := localTracker.ParseFood(desc)
+		if err != nil {
+			m.ProgressChan <- ProgressMsg{
+				TaskID: taskID,
+				Stage:  "failed",
+				Err:    err,
+			}
+			return nil
+		}
+
+		m.ProgressChan <- ProgressMsg{
+			TaskID: taskID,
+			Stage:  "completed",
+			Result: preview,
+		}
+		return nil
+	}
+}
+
+func (m Model) listenForProgressCmd() tea.Cmd {
+	return func() tea.Msg {
+		msg := <-m.ProgressChan
+		return msg
+	}
+}
+
 func (m Model) handleConfirmFoodKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
 	switch msg.String() {
 	case "y":
 		m.Loading = true
 		return m, m.saveFoodCmd(m.PendingFood)
 	case "n":
-		m.Mode = DashboardView
-		return m, m.getStatsCmd()
+		if len(m.Tasks) > 0 && m.ActiveTaskIndex < len(m.Tasks) {
+			m.Tasks = append(m.Tasks[:m.ActiveTaskIndex], m.Tasks[m.ActiveTaskIndex+1:]...)
+			if m.ActiveTaskIndex >= len(m.Tasks) {
+				m.ActiveTaskIndex = len(m.Tasks) - 1
+			}
+			if m.ActiveTaskIndex < 0 {
+				m.ActiveTaskIndex = 0
+			}
+		}
+		m.Mode = AddFoodView
+		if len(m.Tasks) > 0 {
+			m.FocusTaskList = true
+			m.FoodInput.Blur()
+		} else {
+			m.FocusTaskList = false
+			m.FoodInput.Focus()
+		}
+		return m, noOpCmd()
 	case "e":
 		m.Mode = EditFoodPreviewView
 		m.EditField = 0

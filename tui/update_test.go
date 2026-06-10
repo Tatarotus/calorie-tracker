@@ -160,8 +160,8 @@ func TestHandleConfirmFoodKeys_Discard(t *testing.T) {
 	model, cmd := m.handleConfirmFoodKeys(msg)
 	m2 := model
 
-	if m2.Mode != DashboardView {
-		t.Errorf("Expected DashboardView, got %v", m2.Mode)
+	if m2.Mode != AddFoodView {
+		t.Errorf("Expected AddFoodView, got %v", m2.Mode)
 	}
 	if cmd == nil {
 		t.Error("Expected non-nil command for discard")

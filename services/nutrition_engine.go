@@ -23,6 +23,7 @@ type NutritionEngine struct {
 	calculator        *MacroCalculator
 	fuzzyMatcher      *FuzzyMatcher
 	synonymMapper     *SynonymMapper
+	ProgressCallback  func(stage string)
 }
 
 func NewNutritionEngine(db db.DBProvider, llm *LLMService) *NutritionEngine {
@@ -51,31 +52,41 @@ func NewNutritionEngineWithProviders(db db.DBProvider, llm *LLMService, provider
 	confidenceCalc := NewConfidenceCalculator()
 	validator := NewSemanticValidator(llm, synonymMapper)
 
-	return &NutritionEngine{
+	resolver := &HybridNutritionResolver{
+		db:                db,
+		llm:               llm,
+		providers:         providers,
+		fuzzyResolver:     fuzzyResolver,
+		ttlPolicy:         ttlPolicy,
+		cacheResolver:     cacheResolver,
+		validator:         validator,
+		canonicalResolver: canonicalService,
+	}
+
+	engine := &NutritionEngine{
 		db:                db,
 		parser:            &LlmParser{llm: llm},
 		normalizer:        normalizer,
 		canonicalResolver: canonicalService,
 		cacheResolver:     cacheResolver,
-		nutritionResolver: &HybridNutritionResolver{
-			db:                db,
-			llm:               llm,
-			providers:         providers,
-			fuzzyResolver:     fuzzyResolver,
-			ttlPolicy:         ttlPolicy,
-			cacheResolver:     cacheResolver,
-			validator:         validator,
-			canonicalResolver: canonicalService,
-		},
-		validator:      validator,
-		scaler:         scaler,
-		confidenceCalc: confidenceCalc,
-		fuzzyResolver:  fuzzyResolver,
-		ttlPolicy:      ttlPolicy,
-		calculator:     NewMacroCalculator(),
-		fuzzyMatcher:   fuzzyMatcher,
-		synonymMapper:  synonymMapper,
+		nutritionResolver: resolver,
+		validator:         validator,
+		scaler:            scaler,
+		confidenceCalc:    confidenceCalc,
+		fuzzyResolver:     fuzzyResolver,
+		ttlPolicy:         ttlPolicy,
+		calculator:        NewMacroCalculator(),
+		fuzzyMatcher:      fuzzyMatcher,
+		synonymMapper:     synonymMapper,
 	}
+
+	resolver.ProgressCallback = func(stage string) {
+		if engine.ProgressCallback != nil {
+			engine.ProgressCallback(stage)
+		}
+	}
+
+	return engine
 }
 
 // Analyze parses raw user inputs and resolves them in the 11-stage pipeline.

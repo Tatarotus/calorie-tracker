@@ -95,13 +95,9 @@ Rules:
 		return nil, err
 	}
 
-	jsonStr := s.extractJSON(content)
-	jsonStr = s.sanitizeJSON(jsonStr)
-	jsonStr = s.cleanJSON(jsonStr)
-
 	var result models.ReferenceFood
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w, content: %s", err, content)
+	if err := s.parseLLMResponse(content, &result); err != nil {
+		return nil, err
 	}
 
 	return &result, nil
@@ -149,12 +145,9 @@ Rules:
 		return nil, err
 	}
 
-	jsonStr := s.extractJSON(content)
-	jsonStr = s.sanitizeJSON(jsonStr)
-	jsonStr = s.cleanJSON(jsonStr)
 	var result ParsedFoodItemsResponse
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse LLM response: %w, content: %s", err, content)
+	if err := s.parseLLMResponse(content, &result); err != nil {
+		return nil, err
 	}
 
 	parser := NewFoodParser()
@@ -216,15 +209,12 @@ Rules:
 		return false, nil, err
 	}
 
-	jsonStr := s.extractJSON(content)
-	jsonStr = s.sanitizeJSON(jsonStr)
-
 	type ValidateResponse struct {
 		Valid    bool     `json:"valid"`
 		Warnings []string `json:"warnings"`
 	}
 	var res ValidateResponse
-	if err := json.Unmarshal([]byte(jsonStr), &res); err != nil {
+	if err := s.parseLLMResponse(content, &res); err != nil {
 		return false, nil, fmt.Errorf("failed to parse validation response: %w", err)
 	}
 
@@ -253,10 +243,8 @@ func (s *LLMService) AnalyzeReview(data models.ReviewData) (*models.ReviewResult
 		return nil, err
 	}
 
-	jsonStr := s.extractJSON(content)
-
 	var result models.ReviewResult
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+	if err := s.parseLLMResponse(content, &result); err != nil {
 		return nil, fmt.Errorf("failed to parse LLM review: %w, content: %s", err, content)
 	}
 
@@ -439,4 +427,70 @@ type chatResponse struct {
 			Content string `json:"content"`
 		} `json:"message"`
 	} `json:"choices"`
+}
+
+// parseLLMResponse robustly extracts and parses JSON candidates from LLM response.
+func (s *LLMService) parseLLMResponse(content string, dest interface{}) error {
+	var candidates []string
+
+	// 1. Try to find all markdown blocks (both ```json and ```)
+	reCodeBlock := regexp.MustCompile("(?s)```(?:json)?\n*(.*?)\n*```")
+	matches := reCodeBlock.FindAllStringSubmatch(content, -1)
+	for _, m := range matches {
+		if len(m) > 1 {
+			candidates = append(candidates, strings.TrimSpace(m[1]))
+		}
+	}
+
+	// 2. Also try brace-delimited blocks (matching '{' and '}')
+	startIdx := 0
+	for {
+		start := strings.Index(content[startIdx:], "{")
+		if start == -1 {
+			break
+		}
+		start += startIdx
+		
+		depth := 0
+		end := -1
+		for i := start; i < len(content); i++ {
+			if content[i] == '{' {
+				depth++
+			} else if content[i] == '}' {
+				depth--
+				if depth == 0 {
+					end = i
+					break
+				}
+			}
+		}
+		
+		if end != -1 {
+			candidates = append(candidates, content[start:end+1])
+			startIdx = start + 1
+		} else {
+			break
+		}
+	}
+
+	// 3. Fallback: try the whole content
+	candidates = append(candidates, content)
+
+	// Try parsing each candidate in order
+	var lastErr error
+	for _, cand := range candidates {
+		cand = s.sanitizeJSON(cand)
+		cand = s.cleanJSON(cand)
+		
+		if err := json.Unmarshal([]byte(cand), dest); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("failed to parse JSON from candidates (last error: %w), content: %s", lastErr, content)
+	}
+	return fmt.Errorf("no JSON candidates found in content: %s", content)
 }

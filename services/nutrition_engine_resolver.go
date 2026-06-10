@@ -4,6 +4,7 @@ import (
 	"calorie-tracker/db"
 	"calorie-tracker/models"
 	"fmt"
+	"strings"
 )
 
 type HybridNutritionResolver struct {
@@ -15,12 +16,17 @@ type HybridNutritionResolver struct {
 	cacheResolver     CacheResolver
 	validator         *SemanticValidator
 	canonicalResolver *CanonicalResolverService
+	ProgressCallback  func(stage string)
 }
 
 func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item ParsedFoodItem) (*models.ReferenceFood, *models.ResolutionTrace, error) {
 	trace := &models.ResolutionTrace{
 		ParserUsed:   "llm",
 		CanonicalKey: canonical.CanonicalName,
+	}
+
+	if r.ProgressCallback != nil {
+		r.ProgressCallback("cache")
 	}
 
 	// 1. Cache-first: user override, then active local cache.
@@ -97,6 +103,14 @@ func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.Canon
 	resChan := make(chan providerResult, len(activeProviders))
 	for _, provider := range activeProviders {
 		go func(p NutritionProvider) {
+			if r.ProgressCallback != nil {
+				providerType := fmt.Sprintf("%T", p)
+				if strings.Contains(strings.ToLower(providerType), "fatsecret") {
+					r.ProgressCallback("fatsecret")
+				} else if strings.Contains(strings.ToLower(providerType), "calorieninjas") {
+					r.ProgressCallback("calorieninjas")
+				}
+			}
 			ref, err := p.ResolveFood(parsedFoodFromItem(item))
 			resChan <- providerResult{provider: p, ref: ref, err: err}
 		}(provider)
@@ -226,13 +240,26 @@ func (r *HybridNutritionResolver) acceptCacheCandidate(canonical *models.Canonic
 }
 
 func (r *HybridNutritionResolver) resolveLLMWithSerpFallback(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
-	llmCandidate, err := r.resolveLLM(item)
+	var llmCandidate *ResolutionCandidate
+	var serpCandidate *ResolutionCandidate
+	var err error
+
+	llmCandidate, err = r.resolveLLM(item)
 	if err != nil {
-		return nil, err
+		if trace != nil {
+			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm fallback failed: "+err.Error())
+		}
 	}
-	serpCandidate, err := r.resolveSerpAPI(item)
+
+	if r.ProgressCallback != nil {
+		r.ProgressCallback("serp")
+	}
+
+	serpCandidate, err = r.resolveSerpAPI(item)
 	if err != nil {
-		return nil, err
+		if trace != nil {
+			trace.ValidationWarnings = append(trace.ValidationWarnings, "serpapi fallback failed: "+err.Error())
+		}
 	}
 
 	switch {

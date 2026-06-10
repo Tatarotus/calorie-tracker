@@ -3,6 +3,7 @@ package tui
 import (
 	"calorie-tracker/models"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,16 +16,17 @@ func (m Model) View() string {
 
 	var content string
 	if m.Loading {
-		msg := "⏳ Loading..."
+		arrow := lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true).Render("====>")
+		msg := arrow + " Loading..."
 		switch m.Mode {
 		case AddFoodView:
-			msg = "🤖 Analyzing your meal..."
+			msg = arrow + " Analyzing your meal..."
 		case ReviewView:
-			msg = "📊 Generating your review..."
+			msg = arrow + " Generating your review..."
 		case ConfirmFoodView:
-			msg = "💾 Saving to database..."
+			msg = arrow + " Saving to database..."
 		case SetGoalView:
-			msg = "🎯 Setting your goal..."
+			msg = arrow + " Setting your goal..."
 		}
 		content = msg
 	} else {
@@ -134,11 +136,67 @@ func (m Model) renderGoalComparison() string {
 	return fmt.Sprintf("🎯 Goal: %s", m.GoalDescription)
 }
 
+func getProgressArrow(status string) string {
+	arrowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true)
+	switch status {
+	case "pending":
+		// 0% - smallest arrow: "=>"
+		return arrowStyle.Render("=>") + " pending"
+	case "cache":
+		// 25% - "===>"
+		return arrowStyle.Render("===>") + " cache"
+	case "fatsecret":
+		// 50% - half arrow: "=======>"
+		return arrowStyle.Render("=======>") + " fatsecret"
+	case "calorieninjas":
+		// 75% - "=========>"
+		return arrowStyle.Render("=========>") + " calorieninjas"
+	case "serp":
+		// 90% - "============>"
+		return arrowStyle.Render("============>") + " serp"
+	case "completed":
+		// 100% - full width: "=============>"
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Bold(true).Render("=============>") + " completed"
+	case "failed":
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Bold(true).Render("❌ Failed")
+	default:
+		return arrowStyle.Render("=>") + " " + status
+	}
+}
+
 func (m Model) addFoodView() string {
-	return StyleSection.Render(
-		StyleHeader.Render("Log Food (Describe what you ate)") + "\n\n" +
-			m.FoodInput.View(),
-	)
+	inputView := StyleHeader.Render("Log Food (Describe what you ate)") + "\n\n" + m.FoodInput.View()
+
+	if len(m.Tasks) == 0 {
+		return StyleSection.Render(inputView)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(inputView)
+	sb.WriteString("\n\n" + StyleHeader.Render("Pending:") + "\n")
+
+	for i, t := range m.Tasks {
+		// Determine selection indicators
+		cursor := "  "
+		itemStyle := lipgloss.NewStyle()
+		if m.FocusTaskList && i == m.ActiveTaskIndex {
+			cursor = "> "
+			itemStyle = StyleHighlight
+		}
+
+		// Build task display string
+		statusStr := getProgressArrow(t.Status)
+		if t.Status == "completed" && t.Result != nil {
+			statusStr = fmt.Sprintf("%s (%s - %.0f kcal)", statusStr, t.Result.Description, t.Result.Calories)
+		} else if t.Status == "failed" && t.Error != nil {
+			statusStr = fmt.Sprintf("%s (%v)", statusStr, t.Error)
+		}
+
+		taskLine := fmt.Sprintf("%s%s: %s", cursor, t.Description, statusStr)
+		sb.WriteString(itemStyle.Render(taskLine) + "\n")
+	}
+
+	return StyleSection.Render(sb.String())
 }
 
 func (m Model) addWaterView() string {
@@ -298,9 +356,15 @@ func (m Model) reviewView() string {
 		scoreStyle = StyleWarning
 	}
 
+	isNative := !m.Tracker.IsLLMConfigured() || os.Getenv("USE_NATIVE_REVIEW") == "true"
+	headerTitle := "AI PROGRESS REVIEW"
+	if isNative {
+		headerTitle = "NATIVE PROGRESS REVIEW"
+	}
+
 	stickyHeader := fmt.Sprintf(
 		"%s\nScore: %s | Progress: %s\n%s\n",
-		StyleHeader.Render("AI PROGRESS REVIEW"),
+		StyleHeader.Render(headerTitle),
 		scoreStyle.Render(fmt.Sprintf("%d/100", r.Score)),
 		StyleHighlight.Render(strings.ToUpper(r.Progress)),
 		strings.Repeat("─", 58),
@@ -316,10 +380,18 @@ func (m Model) helpView() string {
 		help = "y: confirm • n: discard • e: edit • q: quit"
 	case EditFoodPreviewView:
 		help = "enter: next/save • esc: cancel • q: quit"
-	case AddFoodView, AddWaterView, SetGoalView:
-		help = "enter: submit • ctrl+m: manual • esc: back • q: quit"
+	case AddFoodView:
+		if m.FocusTaskList {
+			help = "tab: focus input • j/k: navigate • enter/space: review • d/backspace: delete • esc: back • q: quit"
+		} else if len(m.Tasks) > 0 {
+			help = "tab: focus pending • enter: submit • ctrl+m: manual • esc: back • q: quit"
+		} else {
+			help = "enter: submit • ctrl+m: manual • esc: back • q: quit"
+		}
+	case AddWaterView, SetGoalView:
+		help = "enter: submit • esc: back • q: quit"
 	case ReviewView, TodayLogView, WeekLogView, MonthLogView:
-		help = "↑/↓: scroll • d: dashboard • t: today\n7: week • m: month • q: quit"
+		help = "↑/↓ or j/k: scroll • d: dashboard • t: today\n7: week • m: month • q: quit"
 	default:
 		help = "d: dashboard • a: add food • w: add water • g: goal • t: today\n7: week • m: month • r: review • u: undo • q: quit"
 	}

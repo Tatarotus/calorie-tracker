@@ -3,7 +3,10 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
+
+	"calorie-tracker/config"
 
 	"github.com/spf13/cobra"
 )
@@ -15,13 +18,23 @@ var reviewCmd = &cobra.Command{
 		database, tracker := initDBAndTracker()
 		defer func() { _ = database.Close() }()
 
-		fmt.Println("Analyzing your recent progress... This may take a moment.")
+		cfg := config.Load()
+		isNative := cfg.SambaAPIKey == "" || os.Getenv("USE_NATIVE_REVIEW") == "true"
+		if isNative {
+			fmt.Println("Generating your native progress review...")
+		} else {
+			fmt.Println("Analyzing your recent progress... This may take a moment.")
+		}
 		res, err := tracker.RunReview()
 		if err != nil {
 			log.Fatalf("Error running review: %v", err)
 		}
 
-		fmt.Printf("\n=== AI PROGRESS REVIEW ===\n")
+		title := "AI PROGRESS REVIEW"
+		if isNative {
+			title = "NATIVE PROGRESS REVIEW"
+		}
+		fmt.Printf("\n=== %s ===\n", title)
 		fmt.Printf("Score: %d/100 | Progress: %s\n", res.Score, strings.ToUpper(res.Progress))
 		fmt.Println(strings.Repeat("-", 40))
 

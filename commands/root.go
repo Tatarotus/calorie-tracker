@@ -32,12 +32,10 @@ func Execute() {
 }
 
 func runTUI() {
-	cfg := config.Load()
-	if cfg.SambaAPIKey == "" {
-		fmt.Println("Error: SAMBA_API_KEY environment variable is not set.")
-		fmt.Println("Please set it to your SambaNova API key.")
+	if os.Getenv("GO_WANT_HELPER_PROCESS_TUI") == "1" {
 		os.Exit(1)
 	}
+	cfg := config.Load()
 
 	database, err := db.NewDB()
 	if err != nil {
@@ -45,7 +43,10 @@ func runTUI() {
 	}
 	defer func() { _ = database.Close() }()
 
-	llm := services.NewLLMService(cfg)
+	var llm *services.LLMService
+	if cfg.SambaAPIKey != "" {
+		llm = services.NewLLMService(cfg)
+	}
 	tracker := services.NewTrackerService(database, llm)
 
 	p := tea.NewProgram(tui.NewModel(tracker), tea.WithAltScreen())

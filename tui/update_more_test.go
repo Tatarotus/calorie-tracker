@@ -75,8 +75,10 @@ func TestHandleInputModeKeys_Enter(t *testing.T) {
 	model, _ := m.handleInputModeKeys(msg)
 	m2 := model
 
-	if !m2.Loading {
-		t.Error("Expected Loading to be true")
+	if len(m2.Tasks) != 1 {
+		t.Errorf("Expected 1 task, got %d", len(m2.Tasks))
+	} else if m2.Tasks[0].Description != "apple" {
+		t.Errorf("Expected task description 'apple', got %q", m2.Tasks[0].Description)
 	}
 }
 

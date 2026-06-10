@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
@@ -325,5 +326,36 @@ func (s *TrackerService) RunReview() (*models.ReviewResult, error) {
 		WaterEntries: simpleWaterEntries,
 	}
 
+	if s.llm == nil || os.Getenv("USE_NATIVE_REVIEW") == "true" {
+		return AnalyzeNativeReview(data), nil
+	}
+
 	return s.llm.AnalyzeReview(data)
+}
+
+func (s *TrackerService) IsLLMConfigured() bool {
+	return s.llm != nil
+}
+
+func (s *TrackerService) Clone() *TrackerService {
+	engineCopy := *s.engine
+	resolverCopy := *s.engine.nutritionResolver.(*HybridNutritionResolver)
+
+	engineCopy.nutritionResolver = &resolverCopy
+
+	resolverCopy.ProgressCallback = func(stage string) {
+		if engineCopy.ProgressCallback != nil {
+			engineCopy.ProgressCallback(stage)
+		}
+	}
+
+	return &TrackerService{
+		db:     s.db,
+		llm:    s.llm,
+		engine: &engineCopy,
+	}
+}
+
+func (s *TrackerService) SetProgressCallback(cb func(stage string)) {
+	s.engine.ProgressCallback = cb
 }

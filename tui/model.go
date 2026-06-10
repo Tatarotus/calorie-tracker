@@ -24,6 +24,21 @@ const (
 	SetGoalView
 )
 
+type ParseTask struct {
+	ID          int
+	Description string
+	Status      string // "pending", "cache", "fatsecret", "calorieninjas", "serp", "completed", "failed"
+	Result      *models.FoodPreview
+	Error       error
+}
+
+type ProgressMsg struct {
+	TaskID int
+	Stage  string
+	Result *models.FoodPreview
+	Err    error
+}
+
 type Model struct {
 	Tracker         *services.TrackerService
 	Mode            ViewMode
@@ -45,6 +60,13 @@ type Model struct {
 	Error           error
 	Width           int
 	Height          int
+
+	// Background parsing task fields
+	Tasks           []ParseTask
+	ActiveTaskIndex int
+	NextTaskID      int
+	ProgressChan    chan ProgressMsg
+	FocusTaskList   bool
 }
 
 func NewModel(tracker *services.TrackerService) Model {
@@ -63,13 +85,14 @@ func NewModel(tracker *services.TrackerService) Model {
 	vp := viewport.New(0, 0)
 
 	return Model{
-		Tracker:    tracker,
-		Mode:       DashboardView,
-		FoodInput:  fi,
-		WaterInput: wi,
-		GoalInput:  gi,
-		EditInput:  ei,
-		Viewport:   vp,
+		Tracker:      tracker,
+		Mode:         DashboardView,
+		FoodInput:    fi,
+		WaterInput:   wi,
+		GoalInput:    gi,
+		EditInput:    ei,
+		Viewport:     vp,
+		ProgressChan: make(chan ProgressMsg, 100),
 	}
 }
 
