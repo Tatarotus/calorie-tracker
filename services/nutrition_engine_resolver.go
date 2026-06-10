@@ -60,8 +60,8 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 		return accepted.ReferenceFood, trace, nil
 	}
 
-	// 2. Run configured primary providers concurrently (e.g. fatsecret, calorieninjas)
-	accepted, err := r.resolveActiveProviders(canonical, item, trace)
+	// 2. Run configured primary providers + SerpAPI concurrently and choose the best candidate
+	accepted, err := r.resolveActiveProvidersAndCompare(canonical, item, trace)
 	if err != nil {
 		return nil, trace, err
 	}
@@ -70,23 +70,31 @@ func (r *HybridNutritionResolver) Resolve(canonical *models.CanonicalFood, item 
 		return accepted.ReferenceFood, trace, nil
 	}
 
-	// 3. Last resort: LLM estimate, optionally cross-checked by SerpAPI/Google.
-	accepted, err = r.resolveLLMWithSerpFallback(canonical, item, trace)
+	// 3. Last resort: LLM estimate
+	llmCandidate, err := r.resolveLLM(item)
 	if err != nil {
-		return nil, trace, err
+		if trace != nil {
+			trace.ValidationWarnings = append(trace.ValidationWarnings, "llm fallback failed: "+err.Error())
+		}
 	}
-	if accepted != nil {
-		r.updateTraceAndCache(canonical, accepted, trace)
-		return accepted.ReferenceFood, trace, nil
+	if llmCandidate != nil {
+		ok, err := r.evaluateCandidate(canonical, llmCandidate)
+		if err != nil {
+			return nil, trace, err
+		}
+		if ok {
+			r.updateTraceAndCache(canonical, llmCandidate, trace)
+			return llmCandidate.ReferenceFood, trace, nil
+		}
 	}
 
 	return nil, trace, nil
 }
 
-func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
+func (r *HybridNutritionResolver) resolveActiveProvidersAndCompare(canonical *models.CanonicalFood, item ParsedFoodItem, trace *models.ResolutionTrace) (*ResolutionCandidate, error) {
 	var activeProviders []NutritionProvider
 	for _, provider := range r.providers {
-		if !isSerpAPIProvider(provider) {
+		if provider != nil {
 			activeProviders = append(activeProviders, provider)
 		}
 	}
@@ -109,6 +117,8 @@ func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.Canon
 					r.ProgressCallback("fatsecret")
 				} else if strings.Contains(strings.ToLower(providerType), "calorieninjas") {
 					r.ProgressCallback("calorieninjas")
+				} else if strings.Contains(strings.ToLower(providerType), "serp") {
+					r.ProgressCallback("serp")
 				}
 			}
 			ref, err := p.ResolveFood(parsedFoodFromItem(item))
@@ -116,10 +126,14 @@ func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.Canon
 		}(provider)
 	}
 
+	var validCandidates []*ResolutionCandidate
+
 	for i := 0; i < len(activeProviders); i++ {
 		res := <-resChan
 		if res.err != nil {
-			trace.ValidationWarnings = append(trace.ValidationWarnings, "provider lookup failed: "+res.err.Error())
+			if trace != nil {
+				trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%T lookup failed: %v", res.provider, res.err))
+			}
 			continue
 		}
 
@@ -136,6 +150,10 @@ func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.Canon
 				sourceType = "calorieninjas"
 				resolutionMethod = "calorieninjas_api"
 				confidence = 0.95
+			} else if _, ok := res.provider.(*SerpAPIProvider); ok {
+				sourceType = "serpapi_fallback"
+				resolutionMethod = "serpapi_fallback"
+				confidence = 0.85
 			}
 
 			candidate := &ResolutionCandidate{
@@ -150,12 +168,21 @@ func (r *HybridNutritionResolver) resolveActiveProviders(canonical *models.Canon
 				return nil, evalErr
 			}
 			if ok {
-				return candidate, nil
+				validCandidates = append(validCandidates, candidate)
+			} else {
+				if trace != nil {
+					trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%s response failed validation", sourceType))
+				}
 			}
-			trace.ValidationWarnings = append(trace.ValidationWarnings, fmt.Sprintf("%s response failed validation", sourceType))
 		}
 	}
-	return nil, nil
+
+	if len(validCandidates) == 0 {
+		return nil, nil
+	}
+
+	best := r.evaluateBestCandidate(validCandidates)
+	return best, nil
 }
 
 func (r *HybridNutritionResolver) resolveExactReference(canonical *models.CanonicalFood, item ParsedFoodItem) (*ResolutionCandidate, error) {
@@ -456,4 +483,81 @@ func (r *HybridNutritionResolver) updateTraceAndCache(canonical *models.Canonica
 		_ = r.db.SaveNutritionCache(cacheEntry)
 		_ = r.db.CacheFood(*accepted.ReferenceFood)
 	}
+}
+
+func getNormalizedMacros(ref *models.ReferenceFood) models.Macros {
+	if ref == nil {
+		return models.Macros{}
+	}
+	if ref.BaseQuantity <= 0 {
+		return ref.Macros
+	}
+	factor := 100.0 / ref.BaseQuantity
+	return models.Macros{
+		Calories: ref.Macros.Calories * factor,
+		Protein:  ref.Macros.Protein * factor,
+		Carbs:    ref.Macros.Carbs * factor,
+		Fat:      ref.Macros.Fat * factor,
+	}
+}
+
+func (r *HybridNutritionResolver) evaluateBestCandidate(candidates []*ResolutionCandidate) *ResolutionCandidate {
+	if len(candidates) == 0 {
+		return nil
+	}
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+
+	type candidateScore struct {
+		cand  *ResolutionCandidate
+		score float64
+	}
+
+	scores := make([]candidateScore, len(candidates))
+	for i, c1 := range candidates {
+		m1 := getNormalizedMacros(c1.ReferenceFood)
+		var diffSum float64
+		for j, c2 := range candidates {
+			if i == j {
+				continue
+			}
+			m2 := getNormalizedMacros(c2.ReferenceFood)
+			
+			calDiff := abs(m1.Calories - m2.Calories)
+			proDiff := abs(m1.Protein - m2.Protein)
+			carbDiff := abs(m1.Carbs - m2.Carbs)
+			fatDiff := abs(m1.Fat - m2.Fat)
+			
+			diffSum += calDiff + 4.0*(proDiff+carbDiff+fatDiff)
+		}
+		scores[i] = candidateScore{
+			cand:  c1,
+			score: diffSum / float64(len(candidates)-1),
+		}
+	}
+
+	bestIdx := 0
+	minScore := scores[0].score
+
+	for i := 1; i < len(scores); i++ {
+		if scores[i].score < minScore-5.0 {
+			minScore = scores[i].score
+			bestIdx = i
+		} else if abs(scores[i].score-minScore) <= 5.0 {
+			if scores[i].cand.Confidence > scores[bestIdx].cand.Confidence {
+				minScore = scores[i].score
+				bestIdx = i
+			}
+		}
+	}
+
+	return scores[bestIdx].cand
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }

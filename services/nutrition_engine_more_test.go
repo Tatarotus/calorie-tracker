@@ -467,9 +467,9 @@ func TestHybridNutritionResolver_ParallelFanOut(t *testing.T) {
 		t.Fatal("expected non-nil preview")
 	}
 
-	// Should complete much faster than the 500ms slow provider delay
-	if duration >= 400*time.Millisecond {
-		t.Errorf("expected parallel racing to complete under 400ms, took %v", duration)
+	// Should complete after all providers (including slow ones) complete to evaluate best candidate
+	if duration < 450*time.Millisecond {
+		t.Errorf("expected parallel resolution to wait for all candidates, took %v", duration)
 	}
 
 	// Should select the fast provider's result (Calories = 320)
