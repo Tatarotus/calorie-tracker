@@ -157,6 +157,11 @@ func TestFoodParserParse(t *testing.T) {
 		{"pão com manteiga", ParsedFood{Amount: 0, Unit: "", Name: "pao com manteiga"}},
 		{"pão de mel", ParsedFood{Amount: 0, Unit: "", Name: "pao de mel"}},
 		{"arroz e feijão", ParsedFood{Amount: 0, Unit: "", Name: "arroz e feijao"}},
+		{"1/2 pineapple", ParsedFood{Amount: 0.5, Unit: "", Name: "pineapple"}},
+		{"1/4 de mamão formosa", ParsedFood{Amount: 0.25, Unit: "", Name: "mamao formosa"}},
+		{"1/2 of pineapple", ParsedFood{Amount: 0.5, Unit: "", Name: "pineapple"}},
+		{"3/4 abacaxi", ParsedFood{Amount: 0.75, Unit: "", Name: "abacaxi"}},
+		{"2/3 pizza", ParsedFood{Amount: 0.6666666666666666, Unit: "", Name: "pizza"}},
 	}
 
 	for _, tc := range testCases {
@@ -203,5 +208,56 @@ func TestFoodParserParseMealForDisplay_PreservesInputLanguage(t *testing.T) {
 	}
 	if got[0].Name != "café com leite" {
 		t.Errorf("expected display name %q, got %q", "café com leite", got[0].Name)
+	}
+}
+
+func TestFoodParserNormalizeFractions(t *testing.T) {
+	p := NewFoodParser()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"half", "1/2", "0.5"},
+		{"quarter", "1/4", "0.25"},
+		{"three quarters", "3/4", "0.75"},
+		{"third", "1/3", "0.3333333333333333"},
+		{"two thirds", "2/3", "0.6666666666666666"},
+		{"whole", "2/2", "1"},
+		{"no fraction", "2 apples", "2 apples"},
+		{"fraction in phrase", "1/2 de abacaxi", "0.5 de abacaxi"},
+		{"spaced fraction", "1 / 2", "0.5"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := p.normalizeFractions(tt.input); got != tt.expected {
+				t.Errorf("normalizeFractions(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFoodParserStripFractionConnector(t *testing.T) {
+	p := NewFoodParser()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"de connector", "0.5 de abacaxi", "0.5 abacaxi"},
+		{"of connector", "0.5 of pineapple", "0.5 pineapple"},
+		{"no connector", "0.5 abacaxi", "0.5 abacaxi"},
+		{"integer with de", "2 de ovo", "2 ovo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := p.stripFractionConnector(tt.input); got != tt.expected {
+				t.Errorf("stripFractionConnector(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
 	}
 }

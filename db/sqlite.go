@@ -311,6 +311,13 @@ func (db *DB) seedReferenceFoods() error {
 		{Name: "pao", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
 		{Name: "pao de forma", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
 		{Name: "sandwich bread", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 265, Protein: 9, Carbs: 49, Fat: 3.2}},
+		{Name: "pizza", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 266, Protein: 11, Carbs: 33, Fat: 10}},
+		{Name: "pizza mussarela", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 266, Protein: 11, Carbs: 33, Fat: 10}},
+		{Name: "pizza calabresa", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 292, Protein: 12, Carbs: 30, Fat: 14}},
+		{Name: "abacaxi", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 50, Protein: 0.5, Carbs: 13, Fat: 0.1}},
+		{Name: "pineapple", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 50, Protein: 0.5, Carbs: 13, Fat: 0.1}},
+		{Name: "mamao", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 45, Protein: 0.5, Carbs: 11, Fat: 0.1}},
+		{Name: "papaya", BaseQuantity: 100, Unit: "gram", Macros: models.Macros{Calories: 45, Protein: 0.5, Carbs: 11, Fat: 0.1}},
 	}
 
 	for _, f := range foods {
@@ -369,6 +376,9 @@ func (db *DB) seedCanonicalFoods() error {
 		{"pao", "pão", `["pão", "pao", "bread", "pão francês"]`, "grain", models.FoodTypeGrain, "carb", 50, "gram"},
 		{"pao_de_forma", "pão de forma", `["pão de forma", "pao de forma", "sandwich bread", "sliced bread"]`, "grain", models.FoodTypeGrain, "carb", 25, "gram"},
 		{"cafe", "café", `["café", "cafe", "black coffee"]`, "beverage", models.FoodTypeBeverage, "coffee", 50, "ml"},
+		{"pizza", "pizza", `["pizza", "pizza mussarela", "pizza calabresa", "pizza portuguesa"]`, "composite", models.FoodTypeComposite, "carb+protein+fat", 120, "gram"},
+		{"abacaxi", "abacaxi", `["abacaxi", "pineapple", "abacaxi havaiano"]`, "fruit", models.FoodTypeFruit, "fruit", 900, "gram"},
+		{"mamao", "mamão", `["mamão", "mamao", "mamao formosa", "papaya", "mamão formosa"]`, "fruit", models.FoodTypeFruit, "fruit", 1500, "gram"},
 	}
 
 	for _, cf := range canonicalFoods {

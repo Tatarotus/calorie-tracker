@@ -49,7 +49,8 @@
         { "terms": ["cheese", "queijo"], "value": 28 },
         { "terms": ["apple", "maca"], "value": 182 },
         { "terms": ["tomato", "tomate"], "value": 20 },
-        { "terms": ["cucumber", "pepino"], "value": 15 }
+        { "terms": ["cucumber", "pepino"], "value": 15 },
+        { "terms": ["pizza"], "value": 120 }
       ]
     },
     "unit": {
@@ -66,7 +67,11 @@
         { "terms": ["sweet potato", "batata doce"], "value": 130 },
         { "terms": ["carrot", "cenoura"], "value": 61 },
         { "terms": ["tomato", "tomate"], "value": 123 },
-        { "terms": ["lemon", "limao"], "value": 58 }
+        { "terms": ["lemon", "limao"], "value": 58 },
+        { "terms": ["pizza"], "value": 350 },
+        { "terms": ["pineapple", "abacaxi", "mamao", "mamão"], "value": 900 },
+        { "terms": ["watermelon", "melancia"], "value": 4500 },
+        { "terms": ["melon", "melao", "melão"], "value": 1200 }
       ]
     },
     "handful": {
@@ -82,7 +87,8 @@
       "overrides": [
         { "terms": ["pasta", "macarrao"], "value": 280 },
         { "terms": ["salad", "salada"], "value": 200 },
-        { "terms": ["stew", "ensopado"], "value": 400 }
+        { "terms": ["stew", "ensopado"], "value": 400 },
+        { "terms": ["pizza"], "value": 350 }
       ]
     },
     "serving": {

@@ -11,6 +11,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+var fractionRegex = regexp.MustCompile(`(\d+)\s*/\s*(\d+)`)
+
 type FoodParser struct{}
 
 func NewFoodParser() *FoodParser {
@@ -35,9 +37,35 @@ func (p *FoodParser) removeAccents(s string) string {
 	return result
 }
 
+func (p *FoodParser) normalizeFractions(desc string) string {
+	return fractionRegex.ReplaceAllStringFunc(desc, func(match string) string {
+		parts := fractionRegex.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		num, err1 := strconv.ParseFloat(parts[1], 64)
+		den, err2 := strconv.ParseFloat(parts[2], 64)
+		if err1 != nil || err2 != nil || den == 0 {
+			return match
+		}
+		result := num / den
+		if result == float64(int(result)) {
+			return strconv.Itoa(int(result))
+		}
+		return strconv.FormatFloat(result, 'f', -1, 64)
+	})
+}
+
+func (p *FoodParser) stripFractionConnector(desc string) string {
+	desc = regexp.MustCompile(`^(\d+(?:\.\d+)?)\s+(?:of|de)\s+`).ReplaceAllString(desc, "${1} ")
+	return desc
+}
+
 func (p *FoodParser) Parse(desc string) ParsedFood {
 	desc = strings.ToLower(strings.TrimSpace(desc))
 	desc = p.normalizeLeadingNumberWord(desc)
+	desc = p.normalizeFractions(desc)
+	desc = p.stripFractionConnector(desc)
 	// Pre-normalize: remove some common words that might confuse the regex
 	desc = strings.TrimPrefix(desc, "cerca de ")
 	desc = strings.TrimPrefix(desc, "aproximadamente ")
@@ -154,6 +182,8 @@ func (p *FoodParser) ParseMealForDisplay(desc string) []ParsedFood {
 func (p *FoodParser) parseForDisplay(desc string) ParsedFood {
 	desc = strings.ToLower(strings.TrimSpace(desc))
 	desc = p.normalizeLeadingNumberWord(desc)
+	desc = p.normalizeFractions(desc)
+	desc = p.stripFractionConnector(desc)
 	desc = strings.TrimPrefix(desc, "cerca de ")
 	desc = strings.TrimPrefix(desc, "aproximadamente ")
 
@@ -419,15 +449,20 @@ func (p *FoodParser) normalizeLeadingNumberWord(desc string) string {
 
 func singularizeName(name string) string {
 	replacements := map[string]string{
-		"eggs":     "egg",
-		"ovos":     "ovo",
-		"bananas":  "banana",
-		"slices":   "slice",
-		"fatias":   "fatia",
-		"tomatoes": "tomato",
-		"potatoes": "potato",
-		"macas":    "maca",
-		"apples":   "apple",
+		"eggs":      "egg",
+		"ovos":      "ovo",
+		"bananas":   "banana",
+		"slices":    "slice",
+		"fatias":    "fatia",
+		"tomatoes":  "tomato",
+		"potatoes":  "potato",
+		"macas":     "maca",
+		"apples":    "apple",
+		"pizzas":    "pizza",
+		"abacaxis":  "abacaxi",
+		"mamoes":    "mamao",
+		"melancias": "melancia",
+		"meloes":    "melao",
 	}
 
 	words := strings.Fields(name)
@@ -441,12 +476,13 @@ func singularizeName(name string) string {
 
 func singularizeDisplayName(name string) string {
 	replacements := map[string]string{
-		"eggs":    "egg",
-		"ovos":    "ovo",
-		"bananas": "banana",
-		"maçãs":   "maçã",
-		"macas":   "maca",
-		"apples":  "apple",
+		"eggs":       "egg",
+		"ovos":       "ovo",
+		"bananas":    "banana",
+		"maçãs":      "maçã",
+		"macas":      "maca",
+		"apples":     "apple",
+		"pineapples": "pineapple",
 	}
 
 	words := strings.Fields(name)
